@@ -1,7 +1,7 @@
 <!doctype html>
 <title>Pubmed Statistics</title>
 
-<link rel=stylesheet type=text/css href="{{ url_for('static',filename='style.css')}}">
+<link rel=stylesheet type=text/css href="{{ url_for('static',filename='styleview.css')}}">
 
 <head>
   <link rel="stylesheet" href="http://cdn.pydata.org/bokeh/release/bokeh-0.12.5.min.css" type="text/css" />
@@ -45,28 +45,35 @@
         Enter pubmed search term to view statistics associated with the searchs:
     </h4>
 
-    <form id='search_form' method='post' action='/'>
-      <input type="text" name='searchterm' onkeyup="Expand(this);">
+    <form id='search_form' method='post' action='/search'>
+      <input type="text" name='searchterm' onkeyup="Expand(this);" value="{{ searchstring }}">
       <input type='submit' onclick="showDiv('loadingImg');" value='Submit' />
     </form>
     <ul>
-      <form id='nav_form' method='post' action="/counts" method="post">
-        <li class="active"><a href="javascript:;" onclick="parentNode.parentNode.submit();">Raw Counts</a></li>
+      {% for item in nav_id %}
+      <form id='nav_form' method='post' action="/{{ item }}" method="post">
+        <li class={% if curpage == item %}"active"{% else %}"inactive"{% endif %}><a href="javascript:;" onclick="parentNode.parentNode.submit(); showDiv('loadingImg');">{{ nav_name[item] }}</a></li>
       </form>
-      <form id='nav_form' method='post' action="/geo" method="post">
-        <li class="inactive"><a href="javascript:;" onclick="parentNode.parentNode.submit();">Geographic</a></li>
-      </form>
-      <form id='nav_form' method='post' action="/auth_inst" method="post">
-        <li class="inactive"><a href="javascript:;" onclick="parentNode.parentNode.submit();">Authors & Institutions</a></li>
-      </form>
+      {% endfor %}
     </ul>
   </div>
-  {{ div.stateplot | safe }}
-  {{ div.stateplotnorm | safe }}
+
+  <!-- Loading image once clicked -->
+  <center><img id="loadingImg" src="{{ url_for('static',filename='loading.gif')}}" style="display:none" /></center>
+
+  <!-- State graph page -->
+  {% if curpage == "counts" %}
+    {{ div.yearplot | safe }}
+  {% endif %}
+  {% if curpage == "geo" %}
+    {{ div.stateplot | safe }}
+    {{ div.stateplotnorm | safe }}
+  {% endif %}
+  <!-- End state graph page -->
+
   <!--<div id='b1' style="display:block" class=box1></div>
   <div id='b2' style="display:none" class=box2></div>
   <input type='submit' onclick="swapDiv('b1','b2');" value='Submit' />-->
-  <center><img id="loadingImg" src="{{ url_for('static',filename='loading.gif')}}" style="display:none" /></center>
 </div>
 
 </html>

@@ -48,6 +48,7 @@ li a:hover {
 }
 
 .page {
+  overflow: scroll;
   border: 5px solid #ccc;
   padding: 0.8em;
   background: white;
