@@ -5,7 +5,9 @@
 
 <head>
   <link rel="stylesheet" href="http://cdn.pydata.org/bokeh/release/bokeh-0.12.5.min.css" type="text/css" />
+  <link rel="stylesheet" href="http://cdn.pydata.org/bokeh/release/bokeh-widgets-0.12.5.min.css" type="text/css" />
   <script type="text/javascript" src="http://cdn.pydata.org/bokeh/release/bokeh-0.12.5.min.js"></script>
+  <script type="text/javascript" src="http://cdn.pydata.org/bokeh/release/bokeh-widgets-0.12.5.min.js"></script>
   <script type="text/javascript">
     function Expand(obj) {
       if (!obj.savesize) obj.savesize = obj.size;
@@ -52,7 +54,7 @@
     <ul>
       {% for item in nav_id %}
       <form id='nav_form' method='post' action="/{{ item }}" method="post">
-        <li class={% if curpage == item %}"active"{% else %}"inactive"{% endif %}><a href="javascript:;" onclick="parentNode.parentNode.submit(); showDiv('loadingImg');">{{ nav_name[item] }}</a></li>
+        <li class={% if curpage == item %}"active"{% else %}"inactive"{% endif %}><a href="javascript:;" onclick="parentNode.parentNode.submit(); showDiv('loadingImg'); showDiv('data_container');">{{ nav_name[item] }}</a></li>
       </form>
       {% endfor %}
     </ul>
@@ -60,16 +62,24 @@
 
   <!-- Loading image once clicked -->
   <center><img id="loadingImg" src="{{ url_for('static',filename='loading.gif')}}" style="display:none" /></center>
-
-  <!-- State graph page -->
+  <div id='data_container' style="display:block" >
+  <!-- Year stats page -->
   {% if curpage == "counts" %}
     {{ div.yearplot | safe }}
   {% endif %}
+  <!-- End year stats page -->
+  <!-- State graph page -->
   {% if curpage == "geo" %}
     {{ div.stateplot | safe }}
     {{ div.stateplotnorm | safe }}
   {% endif %}
   <!-- End state graph page -->
+  <!-- Similarity page -->
+  {% if curpage == "similarity" %}
+    {{ div.column_div | safe }}
+  {% endif %}
+  <!-- End similarity page -->
+</div>
 
   <!--<div id='b1' style="display:block" class=box1></div>
   <div id='b2' style="display:none" class=box2></div>
