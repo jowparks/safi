@@ -39,7 +39,7 @@ def index():
         return render_template('pubsearch.html')
     else:
 
-        del app.vars
+        app.vars = {}
 
 #         app.vars['cancertype'] = request.form['cancertype']
 
@@ -61,7 +61,7 @@ def searchView():
         return render_template('pubsearch.html')
     else:
         app.vars = {}
-        app.vars['searchStr'] = request.form['searchterm']
+        app.vars.searchStr = request.form['searchterm']
         return countsView()
 
 
@@ -74,7 +74,7 @@ def countsView():
         #generate random 20 char string as identifier
         #rstr = ''.join(random.choices(string.ascii_letters + string.digits, k=20))
         #app.vars['countsData'] = rstr
-        app.vars['countsData'] = True
+        app.vars.countsData = True
 
 #         while True:
 #             try:
@@ -83,18 +83,18 @@ def countsView():
 #             except:
 #                 print("Error getting year data")
         #app.yearplot = yearGraph(app.vars['searchStr'],1975,2017)
-        app.yearplot = pdp.yearGraph(app.vars['searchStr'],1975,2017)
+        app.yearplot = pdp.yearGraph(app.vars.searchStr,1975,2017)
         app.script, app.div = components({'yearplot': app.yearplot})
 
 
         ######render
-        return render_template('pubview.html', searchstring=app.vars['searchStr'], script=app.script, div=app.div, curpage=app.curpage, nav_id=app.nav_id, nav_name=app.nav_name)
+        return render_template('pubview.html', searchstring=app.vars.searchStr, script=app.script, div=app.div, curpage=app.curpage, nav_id=app.nav_id, nav_name=app.nav_name)
     else:
 
         app.script, app.div = components({'yearplot': app.yearplot})
 
         ######render
-        return render_template('pubview.html', searchstring=app.vars['searchStr'], script=app.script, div=app.div, curpage=app.curpage, nav_id=app.nav_id, nav_name=app.nav_name)
+        return render_template('pubview.html', searchstring=app.vars.searchStr, script=app.script, div=app.div, curpage=app.curpage, nav_id=app.nav_id, nav_name=app.nav_name)
 
 
 
@@ -103,7 +103,7 @@ def countsView():
 def geoView():
     app.curpage = "geo"
     if 'geoData' not in app.vars:
-        app.vars['geoData'] = True
+        app.vars.geoData = True
 
         #connect to Pubmed and try to get data, if fail restart
 #         while True:
@@ -113,17 +113,17 @@ def geoView():
 #             except:
 #                 print("Error getting state data")
         #app.stateplot = stateGraph(app.vars['searchStr'],"1975/01/01","2016/12/31")
-        app.stateplot = sg.stateGraph(app.vars['searchStr'],"1975/01/01","2016/12/31")
+        app.stateplot = sg.stateGraph(app.vars.searchStr,"1975/01/01","2016/12/31")
         app.script, app.div = components({'stateplot': app.stateplot})
 
         ######render
-        return render_template('pubview.html', searchstring=app.vars['searchStr'], script=app.script, div=app.div, curpage=app.curpage, nav_id=app.nav_id, nav_name=app.nav_name)
+        return render_template('pubview.html', searchstring=app.vars.searchStr, script=app.script, div=app.div, curpage=app.curpage, nav_id=app.nav_id, nav_name=app.nav_name)
     else:
 
         app.script, app.div = components({'stateplot': app.stateplot})
 
         ######render
-        return render_template('pubview.html', searchstring=app.vars['searchStr'], script=app.script, div=app.div, curpage=app.curpage, nav_id=app.nav_id, nav_name=app.nav_name)
+        return render_template('pubview.html', searchstring=app.vars.searchStr, script=app.script, div=app.div, curpage=app.curpage, nav_id=app.nav_id, nav_name=app.nav_name)
 
 
 
@@ -132,17 +132,17 @@ def geoView():
 def similarityView():
     app.curpage = "similarity"
     if 'similarity' not in app.vars:
-        app.vars['similarity'] = True
+        app.vars.similarity = True
 
         #app.simplot = similarityGraph(app.vars['searchStr'], '1975', '2017')
-        app.simplot = smp.similarityGraph(app.vars['searchStr'], '1975', '2017')
+        app.simplot = smp.similarityGraph(app.vars.searchStr, '1975', '2017')
         app.script, app.div = components({'column_div': app.simplot})
         ######render
-        return render_template('pubview.html', searchstring=app.vars['searchStr'], script=app.script, div=app.div, curpage=app.curpage, nav_id=app.nav_id, nav_name=app.nav_name)
+        return render_template('pubview.html', searchstring=app.vars.searchStr, script=app.script, div=app.div, curpage=app.curpage, nav_id=app.nav_id, nav_name=app.nav_name)
     else:
         app.script, app.div = components({'column_div': app.simplot})
         ######render
-        return render_template('pubview.html', searchstring=app.vars['searchStr'], script=app.script, div=app.div, curpage=app.curpage, nav_id=app.nav_id, nav_name=app.nav_name)
+        return render_template('pubview.html', searchstring=app.vars.searchStr, script=app.script, div=app.div, curpage=app.curpage, nav_id=app.nav_id, nav_name=app.nav_name)
 
 
 
