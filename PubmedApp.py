@@ -13,7 +13,6 @@ import redis
 #from flask import Flask
 from flask_kvsession import KVSessionExtension
 from simplekv.memory.redisstore import RedisStore
-from pympler.tracker import SummaryTracker
 
 
 store = RedisStore(redis.StrictRedis())
