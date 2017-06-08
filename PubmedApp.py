@@ -8,12 +8,13 @@ from bokeh.embed import components
 import PubDatePlotting as pdp
 import StateGraph as sg
 import SimilarityPlot as smp
-
 #####started kv insertion##########
 import redis
 #from flask import Flask
 from flask_kvsession import KVSessionExtension
 from simplekv.memory.redisstore import RedisStore
+from pympler.tracker import SummaryTracker
+
 
 store = RedisStore(redis.StrictRedis())
 
@@ -84,20 +85,17 @@ def countsView():
 #                 print("Error getting year data")
         #app.yearplot = yearGraph(app.vars['searchStr'],1975,2017)
         app.yearplot = pdp.yearGraph(app.vars['searchStr'],1975,2017)
-        plots = {'yearplot': app.yearplot}
-        script, div = components(plots)
+        app.script, app.div = components({'yearplot': app.yearplot})
 
 
         ######render
-        return render_template('pubview.html', searchstring=app.vars['searchStr'], script=script, div=div, curpage=app.curpage, nav_id=app.nav_id, nav_name=app.nav_name)
+        return render_template('pubview.html', searchstring=app.vars['searchStr'], script=app.script, div=app.div, curpage=app.curpage, nav_id=app.nav_id, nav_name=app.nav_name)
     else:
 
-
-        plots = {'yearplot': app.yearplot}
-        script, div = components(plots)
+        app.script, app.div = components({'yearplot': app.yearplot})
 
         ######render
-        return render_template('pubview.html', searchstring=app.vars['searchStr'], script=script, div=div, curpage=app.curpage, nav_id=app.nav_id, nav_name=app.nav_name)
+        return render_template('pubview.html', searchstring=app.vars['searchStr'], script=app.script, div=app.div, curpage=app.curpage, nav_id=app.nav_id, nav_name=app.nav_name)
 
 
 
@@ -117,18 +115,16 @@ def geoView():
 #                 print("Error getting state data")
         #app.stateplot = stateGraph(app.vars['searchStr'],"1975/01/01","2016/12/31")
         app.stateplot = sg.stateGraph(app.vars['searchStr'],"1975/01/01","2016/12/31")
-        plots = {'stateplot': app.stateplot}
-        script, div = components(plots)
+        app.script, app.div = components({'stateplot': app.stateplot})
 
         ######render
-        return render_template('pubview.html', searchstring=app.vars['searchStr'], script=script, div=div, curpage=app.curpage, nav_id=app.nav_id, nav_name=app.nav_name)
+        return render_template('pubview.html', searchstring=app.vars['searchStr'], script=app.script, div=app.div, curpage=app.curpage, nav_id=app.nav_id, nav_name=app.nav_name)
     else:
 
-        plots = {'stateplot': app.stateplot}
-        script, div = components(plots)
+        app.script, app.div = components({'stateplot': app.stateplot})
 
         ######render
-        return render_template('pubview.html', searchstring=app.vars['searchStr'], script=script, div=div, curpage=app.curpage, nav_id=app.nav_id, nav_name=app.nav_name)
+        return render_template('pubview.html', searchstring=app.vars['searchStr'], script=app.script, div=app.div, curpage=app.curpage, nav_id=app.nav_id, nav_name=app.nav_name)
 
 
 
@@ -141,13 +137,13 @@ def similarityView():
 
         #app.simplot = similarityGraph(app.vars['searchStr'], '1975', '2017')
         app.simplot = smp.similarityGraph(app.vars['searchStr'], '1975', '2017')
-        script, div = components({'column_div': app.simplot})
+        app.script, app.div = components({'column_div': app.simplot})
         ######render
-        return render_template('pubview.html', searchstring=app.vars['searchStr'], script=script, div=div, curpage=app.curpage, nav_id=app.nav_id, nav_name=app.nav_name)
+        return render_template('pubview.html', searchstring=app.vars['searchStr'], script=app.script, div=app.div, curpage=app.curpage, nav_id=app.nav_id, nav_name=app.nav_name)
     else:
-        script, div = components({'column_div': app.simplot})
+        app.script, app.div = components({'column_div': app.simplot})
         ######render
-        return render_template('pubview.html', searchstring=app.vars['searchStr'], script=script, div=div, curpage=app.curpage, nav_id=app.nav_id, nav_name=app.nav_name)
+        return render_template('pubview.html', searchstring=app.vars['searchStr'], script=app.script, div=app.div, curpage=app.curpage, nav_id=app.nav_id, nav_name=app.nav_name)
 
 
 

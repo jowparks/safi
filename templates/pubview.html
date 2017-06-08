@@ -52,7 +52,7 @@
 
     <form id='search_form' method='post' action='/search'>
       <input type="text" name='searchterm' onkeyup="Expand(this);" value="{{ searchstring }}">
-      <input type='submit' onclick="showDiv('loadingImg');" value='Submit' />
+      <input type='submit' onclick="showDiv('loadingImg');hideDiv('data_container');" value='Submit' />
     </form>
     <ul>
       {% for item in nav_id %}
