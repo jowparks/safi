@@ -1,5 +1,8 @@
 ###Main page: PubmedApp
+#mainspot
 
+
+#import string as st
 from flask import Flask, render_template, request, redirect
 from bokeh.embed import components
 import PubDatePlotting as pdp
@@ -57,6 +60,9 @@ def countsView():
     app.curpage = "counts"
     if 'countsData' not in app.vars:
 
+        #generate random 20 char string as identifier
+        #rstr = ''.join(random.choices(string.ascii_letters + string.digits, k=20))
+        #app.vars['countsData'] = rstr
         app.vars['countsData'] = True
 
 #         while True:
@@ -65,9 +71,12 @@ def countsView():
 #                 break
 #             except:
 #                 print("Error getting year data")
-        app.yearplot = pdp.yearGraph(app.vars['searchStr'])
+        #app.yearplot = yearGraph(app.vars['searchStr'],1975,2017)
+        app.yearplot = pdp.yearGraph(app.vars['searchStr'],1975,2017)
         plots = {'yearplot': app.yearplot}
         script, div = components(plots)
+
+
         ######render
         return render_template('pubview.html', searchstring=app.vars['searchStr'], script=script, div=div, curpage=app.curpage, nav_id=app.nav_id, nav_name=app.nav_name)
     else:
@@ -95,16 +104,16 @@ def geoView():
 #                 break
 #             except:
 #                 print("Error getting state data")
-
-        app.stateplot, app.stateplotnorm = sg.stateGraph(app.vars['searchStr'])
-        plots = {'stateplot': app.stateplot, 'stateplotnorm': app.stateplotnorm}
+        #app.stateplot = stateGraph(app.vars['searchStr'],"1975/01/01","2016/12/31")
+        app.stateplot = sg.stateGraph(app.vars['searchStr'],"1975/01/01","2016/12/31")
+        plots = {'stateplot': app.stateplot}
         script, div = components(plots)
 
         ######render
         return render_template('pubview.html', searchstring=app.vars['searchStr'], script=script, div=div, curpage=app.curpage, nav_id=app.nav_id, nav_name=app.nav_name)
     else:
 
-        plots = {'stateplot': app.stateplot, 'stateplotnorm': app.stateplotnorm}
+        plots = {'stateplot': app.stateplot}
         script, div = components(plots)
 
         ######render
@@ -119,15 +128,13 @@ def similarityView():
     if 'similarity' not in app.vars:
         app.vars['similarity'] = True
 
-
+        #app.simplot = similarityGraph(app.vars['searchStr'], '1975', '2017')
         app.simplot = smp.similarityGraph(app.vars['searchStr'], '1975', '2017')
-        print(app.simplot)
         script, div = components({'column_div': app.simplot})
-        print(div)
         ######render
         return render_template('pubview.html', searchstring=app.vars['searchStr'], script=script, div=div, curpage=app.curpage, nav_id=app.nav_id, nav_name=app.nav_name)
     else:
-
+        script, div = components({'column_div': app.simplot})
         ######render
         return render_template('pubview.html', searchstring=app.vars['searchStr'], script=script, div=div, curpage=app.curpage, nav_id=app.nav_id, nav_name=app.nav_name)
 

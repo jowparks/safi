@@ -32,19 +32,6 @@ from bokeh.models.widgets import TextInput, Button
 #see http://dataconomy.com/2015/04/implementing-the-five-most-popular-similarity-measures-in-python/
 #
 
-
-def returnCosine(cids):
-    column = np.hstack(cids).astype(np.float)
-    row = np.hstack([np.ones(len(arr))*i for i, arr in enumerate(cids)]).astype(np.float)
-    vals = np.empty(column.size)
-    vals.fill(1)
-    mat = sp.csc_matrix((vals, (row, column)))
-
-
-    jarr = cosine_similarity(mat)
-    print(jarr[:5])
-    return jarr
-
 # def returnJaccard(cids):
 #     lenList = len(cids)
 #     jarr = np.zeros([lenList,lenList])
@@ -78,7 +65,7 @@ def PMIDsFromSearch(s,sy,ey):
     total_count = search_data["esearchresult"]['count']
 
 
-    maxIds = 500
+    maxIds = 100000 #maximum defined by pubmed
     rids = []
     #loop over all articles and grab set cited papers (see cited_rosetta for paper structure)
     for i in range(ceil(int(total_count)/maxIds)):
@@ -97,15 +84,6 @@ def PMIDsFromSearch(s,sy,ey):
     print(str(len(rids))+" Articles Found:"+str(time.time()-pre))
 
     return rids
-#     this_fetch = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/elink.fcgi?dbfrom=pubmed&linkname=pubmed_pubmed_refs&query_key="+query_key+"&WebEnv="+web_env
-#     #this_fetch = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/elink.fcgi?dbfrom=pubmed&linkname=pubmed_pubmed_refs&query_key="+query_key+"&WebEnv="+web_env+"&cmd=neighbor_score"
-#     #this_fetch = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/elink.fcgi?dbfrom=pubmed&db=pubmed&id=24923681&cmd=neighbor_score"
-
-#     pre = time.time()
-#     fetch_r = requests.post(this_fetch)
-#     print("PMIDs Retrieved:"+str(time.time()-pre))
-
-#     return ET.fromstring(fetch_r.text)
 
 
 #fetch async requests
@@ -133,7 +111,7 @@ async def runCited(url,ids):
         #print(json.loads(responses[0]))
     return responses
 
-def getCitedFromPMIDXML(rids):
+def getCitedFromPMIDs(rids):
     ids = []
     cids = []
 
@@ -145,7 +123,7 @@ def getCitedFromPMIDXML(rids):
     nreqs = ceil(len(rids)/100)
 
     if(nreqs>1):
-        rids = [rids[i:i+nreqs] for i in range(0, len(rids), nreqs)]
+        rids = [rids[i*100:i*100+100] for i in range(0, nreqs)]
 
     #timer
     pre = time.time()
@@ -157,7 +135,7 @@ def getCitedFromPMIDXML(rids):
 
     print("References Retrieved:"+str(time.time()-pre))
 
-    ##Only adds those articles that have citations listed in LinkSetDb (ie articles that are listed in PMC)
+    ##Only adds those articles that have citations listed in LinkSetDb (ie articles that are listed in PMC)c
     for r in res:
         #print(r)
         croot = ET.fromstring(r)
@@ -201,13 +179,14 @@ def getCitedFromPMIDXML(rids):
 
 
 
-########CHANGE CODE BELOW need to grab all ids summary to get the title, authors, pubdate for each
+########Grabs all ids summary to get the title, authors, pubdate for each PMID
 def getPMIDInfo(ids):
     #use full journal name
     titles = []
     dates = []
     authors = []
     journals = []
+    pmccites = []
 
     #https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&version=2.0&id=27656642,24923681
     info_base = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi"
@@ -233,13 +212,15 @@ def getPMIDInfo(ids):
         titles.append(doc.find('Title').text)
         dates.append(doc.find('PubDate').text)
         journals.append(doc.find('FullJournalName').text)
-        aus = ""
+        pmccites.append(doc.find('PmcRefCount').text)
+
+        tempAuths = []
         for auth in doc.find('Authors').iter('Author'):
-            aus += auth.find('Name').text+", "
-        authors.append(aus[:-2])
+            tempAuths.append(auth.find('Name').text)
+        authors.append(tempAuths)
 
 
-    return titles, dates, authors, journals
+    return titles, dates, authors, journals, pmccites
 
 ########CHANGE CODE BELOW need to grab all ids summary to get the title, authors, pubdate for each
 # def getPMIDInfo(ids):
@@ -291,6 +272,20 @@ def getPMIDInfo(ids):
 #             aus += auth.find('Name').text+", "
 #         authors.append(aus[:-2])
 #     return titles, dates, authors, journals
+
+
+def returnCosine(cids):
+    column = np.hstack(cids).astype(np.float)
+    row = np.hstack([np.ones(len(arr))*i for i, arr in enumerate(cids)]).astype(np.float)
+    vals = np.empty(column.size)
+    vals.fill(1)
+    mat = sp.csc_matrix((vals, (row, column)))
+
+
+    jarr = cosine_similarity(mat)
+    #print(jarr[:5])
+    return jarr
+
 
 def calcTSNE(X):
     print(len(X))
@@ -345,10 +340,10 @@ def similarityGraph(si, sy, ey):
     rids = PMIDsFromSearch(ss, sy, ey)
 
     print("Getting Cited PMIDs")
-    ids, cids = getCitedFromPMIDXML(rids)
+    ids, cids = getCitedFromPMIDs(rids)
 
     print("Getting Info of PMIDs")
-    titles, dates, authors, journals = getPMIDInfo(ids)
+    titles, dates, authors, journals, pmccites = getPMIDInfo(ids)
 
     print("Performing sparse cosine similarity")
     pre = time.time()
@@ -359,6 +354,14 @@ def similarityGraph(si, sy, ey):
     Y = calcTSNE(carr)
     print("Total Time:"+str(time.time()-pres))
 
+
+
+    #convert authors list of lists to list of strings for display
+    authors_str = []
+    for auths in authors:
+        authors_str.append(", ".join(auths))
+
+
     colors = ['blue']*len(ids)
     alphas = [1]*len(ids)
     source = ColumnDataSource(
@@ -367,11 +370,12 @@ def similarityGraph(si, sy, ey):
                 y=Y[:,1],
                 PMID=ids,
                 titles=titles,
-                authors=authors,
+                authors=authors_str,
                 journals=journals,
                 dates=dates,
                 colors=colors,
-                alphas=alphas
+                alphas=alphas,
+                pmccites=pmccites
             )
         )
 
@@ -390,6 +394,10 @@ def similarityGraph(si, sy, ey):
                 <div style="max-width: 400px;">
                     <span style="font-size: 10px;">PMID</span>
                     <span style="font-size: 10px; color: #696;">@PMID</span>
+                </div>
+                <div style="max-width: 400px;">
+                    <span style="font-size: 10px;">PMC Citations</span>
+                    <span style="font-size: 10px; color: #696;">@pmccites</span>
                 </div>
             </div>
             """
@@ -461,10 +469,10 @@ def similarityGraph(si, sy, ey):
     taptool.callback = OpenURL(url=url)
 
 
-    word_input = TextInput(title="Search for term within dataset (highlight matching pubs)", callback=textCallback)
-    reset = Button(label="Reset Matching Pubs", callback=resetCallback, width=150)
+    word_input = TextInput(title="Search for term(s) in graph", placeholder="Enter term to highlight", callback=textCallback)
+    reset = Button(label="Clear Highlighting", callback=resetCallback, width=150)
 
-    lt = layout(children = [[word_input], [reset], [p]])
+    lt = layout([[word_input],[reset], [p]])
 
     return lt
 

@@ -9,36 +9,42 @@ from urllib.parse import quote
 #import requests
 
 import json
-from bokeh.sampledata import us_states
+from bokeh.sampledata import us_states as usstat
 from bokeh.plotting import figure, show, output_notebook, ColumnDataSource
 from bokeh.models import HoverTool, CustomJS, OpenURL, TapTool, Range1d
+from bokeh.models.widgets import Panel, Tabs
+from bokeh.layouts import layout
 import pickle
 
+
+#initialize variables
 dataDir = "./static/"
 moneyFile = "FundingPerState2016.pkl"
 
 # affiliation = AD
 searchField = "[AD]"
-us_states = us_states.data.copy()
+us_states = usstat.data.copy()
 del us_states["HI"]
 del us_states["AK"]
 
 state_xs = [us_states[code]["lons"] for code in us_states]
 state_ys = [us_states[code]["lats"] for code in us_states]
 
+
+
 async def fetchStates(url, session):
     async with session.get(url) as response:
         return await response.text()
 
 ###add states correlating with responses############
-async def runStates(states, ss):
+async def runStates(states, ss, sd, ed):
     tasks = []
 
     # Fetch all responses within one Client session,
     # keep connection alive for all requests.
     async with ClientSession() as session:
         for state in states:
-            tu = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=" + state + searchField+"+AND+" +ss+"&mindate=2012/01/01&maxdate=2016/12/31&usehistory=y&retmode=json"
+            tu = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=" + state + searchField+"+AND+"+ss+"&mindate="+sd+"&maxdate="+ed+"&usehistory=y&retmode=json"
             task = asyncio.ensure_future(fetchStates(tu, session))
             tasks.append(task)
 
@@ -50,11 +56,11 @@ async def runStates(states, ss):
     return responses
 
 # gets data from each state while string : ss=searchstring
-def getStates(ss):
+def getStates(ss,sd,ed):
     #start threads and create queue of URLs
     loop = asyncio.get_event_loop()
     states = [us_states[state]["name"] for state in us_states]
-    future = asyncio.ensure_future(runStates(states,ss))
+    future = asyncio.ensure_future(runStates(states,ss,sd,ed))
     res = loop.run_until_complete(future)
     #print(res)
     for idx, state in enumerate(us_states):
@@ -65,12 +71,11 @@ def getStates(ss):
         #print(total_records)
 
 
-def stateGraph(si):
+def stateGraph(si,sd,ed):
     ss = quote(si)
 
-
     ##FOR SEARCHING YOU WILL NEED TO ESCAPE SPACES AND SPECIAL CHARS
-    getStates(ss)
+    getStates(ss,sd,ed)
 #     for state in us_states:
 #         print(state)
 #         print(us_states[state]["count"])
@@ -169,9 +174,14 @@ def stateGraph(si):
     p2.patches('x', 'y', fill_color="#377BA8", fill_alpha='alphas',
                line_color="#884444", line_width=1.5, source=stateNormSource)
 
+    #setting up tabs
+    t1 = Panel(child=p, title= "Publication Count")
+    t2 = Panel(child=p2, title= "Publication Count (Normalized)*")
+    ctabs = Tabs(tabs=[t1,t2],width=800)
+    lt = layout([[ctabs]])
     #show(p)
     #show(p2)
-    return p, p2
+    return lt
 
 # p, p2 = stateGraph("prc2")
 # show(p)

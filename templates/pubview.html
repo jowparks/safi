@@ -22,7 +22,10 @@
         x.style.display = 'none';
       }
     }
-
+    function hideDiv(s){
+      var x = document.getElementById(s);
+      x.style.display = 'none';
+    }
     function swapDiv(o1, o2) {
       var d1 = document.getElementById(o1);
       var d2 = document.getElementById(o2);
@@ -54,7 +57,7 @@
     <ul>
       {% for item in nav_id %}
       <form id='nav_form' method='post' action="/{{ item }}" method="post">
-        <li class={% if curpage == item %}"active"{% else %}"inactive"{% endif %}><a href="javascript:;" onclick="parentNode.parentNode.submit(); showDiv('loadingImg'); showDiv('data_container');">{{ nav_name[item] }}</a></li>
+        <li class={% if curpage == item %}"active"{% else %}"inactive"{% endif %}><a href="javascript:;" onclick="parentNode.parentNode.submit(); showDiv('loadingImg'); hideDiv('data_container');">{{ nav_name[item] }}</a></li>
       </form>
       {% endfor %}
     </ul>
@@ -62,16 +65,16 @@
 
   <!-- Loading image once clicked -->
   <center><img id="loadingImg" src="{{ url_for('static',filename='loading.gif')}}" style="display:none" /></center>
-  <div id='data_container' style="display:block" >
+  <div id='data_container' style="display:block;" >
   <!-- Year stats page -->
   {% if curpage == "counts" %}
+    <!-- SET WIDTH OF PAGE DIV HERE WITH JS DEPENDING ON PAGE LOADED -->
     {{ div.yearplot | safe }}
   {% endif %}
   <!-- End year stats page -->
   <!-- State graph page -->
   {% if curpage == "geo" %}
     {{ div.stateplot | safe }}
-    {{ div.stateplotnorm | safe }}
   {% endif %}
   <!-- End state graph page -->
   <!-- Similarity page -->
@@ -79,7 +82,7 @@
     {{ div.column_div | safe }}
   {% endif %}
   <!-- End similarity page -->
-</div>
+  </div>
 
   <!--<div id='b1' style="display:block" class=box1></div>
   <div id='b2' style="display:none" class=box2></div>
