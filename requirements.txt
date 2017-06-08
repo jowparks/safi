@@ -8,3 +8,6 @@ scipy==0.18.1
 requests==2.12.4
 scikit-learn==0.18.1
 pandas==0.19.2
+simplekv==0.10.0
+Flask-KVSession==0.6.2
+redis==2.10.5
