@@ -10,20 +10,20 @@ import PubDatePlotting as pdp
 import StateGraph as sg
 import SimilarityPlot as smp
 #####started kv insertion##########
-#import redis
-#from flask import Flask
-#from flask_kvsession import KVSessionExtension
-#from simplekv.memory.redisstore import RedisStore
+import redis
+from flask import Flask
+from flask_kvsession import KVSessionExtension
+from simplekv.memory.redisstore import RedisStore
 
 
-#store = RedisStore(redis.StrictRedis())
+store = RedisStore(redis.StrictRedis())
 
-#app = Flask(__name__)
-#KVSessionExtension(store, app)
+app = Flask(__name__)
+KVSessionExtension(store, app)
 ####end kv insertion, uncomment flask(__name__) below if needed########
 # output_notebook()
 
-app = Flask(__name__)
+#app = Flask(__name__)
 
 app.vars = {}
 
