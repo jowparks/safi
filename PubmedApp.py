@@ -24,6 +24,7 @@ import SimilarityPlot as smp
 # output_notebook()
 
 app = Flask(__name__)
+app.secret_key = 'VA&Dnadf8%$$#JK9SDA64asf54@!^&'
 
 ###app.vars = {}
 
@@ -177,5 +178,4 @@ def similarityView():
 
 
 if __name__ == "__main__":
-    app.secret_key = 'VA&Dnadf8%$$#JK9SDA64asf54@!^&'
     app.run(port=33507)
