@@ -4,43 +4,44 @@
 
 import string as st
 import random
-from flask import Flask, render_template, request, redirect
+from flask import Flask, render_template, request, redirect, session
 from bokeh.embed import components
 import PubDatePlotting as pdp
 import StateGraph as sg
 import SimilarityPlot as smp
 #####started kv insertion##########
-import redis
-from flask import Flask
-from flask_kvsession import KVSessionExtension
-from simplekv.memory.redisstore import RedisStore
+#import redis
+#from flask import Flask
+#from flask_kvsession import KVSessionExtension
+#from simplekv.memory.redisstore import RedisStore
 
 
-store = RedisStore(redis.StrictRedis())
+#store = RedisStore(redis.StrictRedis())
 
-app = Flask(__name__)
-KVSessionExtension(store, app)
+#app = Flask(__name__)
+#KVSessionExtension(store, app)
 ####end kv insertion, uncomment flask(__name__) below if needed########
 # output_notebook()
 
-#app = Flask(__name__)
+app = Flask(__name__)
 
-app.vars = {}
+###app.vars = {}
 
 #setting up navigation info
-
-app.nav_id = {'counts':'counts','geo':'geo','similarity':'similarity'}
-app.nav_name = {'counts':'Raw Counts','geo':'Geographic','similarity':'Visualize Article Similarity'}
 
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
     # nquestions=app_lulu.nquestions
     if request.method == 'GET':
+
+        session['nav_id'] = {'counts':'counts','geo':'geo','similarity':'similarity'}
+        session['nav_name'] = {'counts':'Raw Counts','geo':'Geographic','similarity':'Visualize Article Similarity'}
+
         return render_template('pubsearch.html')
     else:
 
-        app.vars  = {}
+        session['vars']  = {}
 
 #         app.vars['cancertype'] = request.form['cancertype']
 
@@ -58,24 +59,24 @@ def index():
 @app.route('/search', methods=['GET', 'POST'])
 def searchView():
     if request.method == 'GET':
-        app.vars = {}
+        session['vars'] = {}
         return render_template('pubsearch.html')
     else:
-        app.vars = {}
-        app.searchStr = request.form['searchterm']
+        session['vars'] = {}
+        session['vars']['searchStr'] = request.form['searchterm']
         return countsView()
 
 
 
 @app.route('/counts', methods=['POST'])
 def countsView():
-    app.curpage = "counts"
-    if 'countsData' not in app.vars:
+    session['curpage'] = "counts"
+    if 'countsData' not in session['vars']:
 
         #generate random 20 char string as identifier
 
         #app.vars['countsData'] = rstr
-        app.vars['countsData'] = True
+        session['vars']['countsData'] = True
 
 #         while True:
 #             try:
@@ -86,32 +87,32 @@ def countsView():
 
         rstr = ''.join(random.choices(st.ascii_letters + st.digits, k=20))
         #app.yearplot = yearGraph(app.vars['searchStr'],1975,2017)
-        yearplot = pdp.yearGraph(app.searchStr,1975,2017)
-        script, app.yeardiv = components({'yearplot': yearplot})
+        yearplot = pdp.yearGraph(session['vars']['searchStr'],1975,2017)
+        script, session['yeardiv'] = components({'yearplot': yearplot})
 
         ###########MODIFY CODE IN OTHER AREAS TO DO SAME THING, ALSO ADD RANDOM KEY FOR FILE STORAGE INSTEAD OF 'outputtemp.js'
-        app.yearscript = rstr+".js"
-        with open("static/bokehscripts/"+app.yearscript,"w") as file:
+        session['yearscript'] = rstr+".js"
+        with open("static/bokehscripts/"+session['yearscript'],"w") as file:
                 #remove JS tags
                 file.write(script[32:-9])
                 file.close()
 
 
         ######render
-        return render_template('pubview.html', searchstring=app.searchStr, script=app.yearscript, div=app.yeardiv, curpage=app.curpage, nav_id=app.nav_id, nav_name=app.nav_name)
+        return render_template('pubview.html', searchstring=session['vars']['searchStr'], script=session['yearscript'], div=session['yeardiv'], curpage=session['curpage'], nav_id=session['nav_id'], nav_name=session['nav_name'])
     else:
 
         ######render
-        return render_template('pubview.html', searchstring=app.searchStr, script=app.yearscript, div=app.yeardiv, curpage=app.curpage, nav_id=app.nav_id, nav_name=app.nav_name)
+        return render_template('pubview.html', searchstring=session['vars']['searchStr'], script=session['yearscript'], div=session['yeardiv'], curpage=session['curpage'], nav_id=session['nav_id'], nav_name=session['nav_name'])
 
 
 
 
 @app.route('/geo', methods=['POST'])
 def geoView():
-    app.curpage = "geo"
-    if 'geoData' not in app.vars:
-        app.vars['geoData'] = True
+    session['curpage'] = "geo"
+    if 'geoData' not in session['vars']:
+        session['vars']['geoData'] = True
 
         #connect to Pubmed and try to get data, if fail restart
 #         while True:
@@ -124,32 +125,32 @@ def geoView():
 
         rstr = ''.join(random.choices(st.ascii_letters + st.digits, k=20))
         #app.yearplot = yearGraph(app.vars['searchStr'],1975,2017)
-        stateplot = sg.stateGraph(app.searchStr,"1975/01/01","2016/12/31")
-        script, app.statediv = components({'stateplot': stateplot})
+        stateplot = sg.stateGraph(session['vars']['searchStr'],"1975/01/01","2016/12/31")
+        script, session['statediv'] = components({'stateplot': stateplot})
 
         ###########MODIFY CODE IN OTHER AREAS TO DO SAME THING, ALSO ADD RANDOM KEY FOR FILE STORAGE INSTEAD OF 'outputtemp.js'
-        app.statescript = rstr+".js"
-        with open("static/bokehscripts/"+app.statescript,"w") as file:
+        session['statescript'] = rstr+".js"
+        with open("static/bokehscripts/"+session['statescript'],"w") as file:
                 #remove JS tags
                 file.write(script[32:-9])
                 file.close()
 
 
         ######render
-        return render_template('pubview.html', searchstring=app.searchStr, script=app.statescript, div=app.statediv, curpage=app.curpage, nav_id=app.nav_id, nav_name=app.nav_name)
+        return render_template('pubview.html', searchstring=session['vars']['searchStr'], script=session['statescript'], div=session['statediv'], curpage=session['curpage'], nav_id=session['nav_id'], nav_name=session['nav_name'])
     else:
 
         ######render
-        return render_template('pubview.html', searchstring=app.searchStr, script=app.statescript, div=app.statediv, curpage=app.curpage, nav_id=app.nav_id, nav_name=app.nav_name)
+        return render_template('pubview.html', searchstring=session['vars']['searchStr'], script=session['statescript'], div=session['statediv'], curpage=session['curpage'], nav_id=session['nav_id'], nav_name=session['nav_name'])
 
 
 
 
 @app.route('/similarity', methods=['POST'])
 def similarityView():
-    app.curpage = "similarity"
-    if 'similarity' not in app.vars:
-        app.vars['similarity'] = True
+    session['curpage'] = "similarity"
+    if 'similarity' not in session['vars']:
+        session['vars']['similarity'] = True
 
         #app.simplot = similarityGraph(app.vars['searchStr'], '1975', '2017')
         #app.simplot = smp.similarityGraph(app.vars['searchStr'], '1975', '2017')
@@ -157,23 +158,24 @@ def similarityView():
 
         rstr = ''.join(random.choices(st.ascii_letters + st.digits, k=20))
         #app.yearplot = yearGraph(app.vars['searchStr'],1975,2017)
-        simplot = smp.similarityGraph(app.searchStr,'1975', '2017')
-        script, app.simdiv = components({'column_div': simplot})
+        simplot = smp.similarityGraph(session['vars']['searchStr'],'1975', '2017')
+        script, session['simdiv'] = components({'column_div': simplot})
 
         ###########MODIFY CODE IN OTHER AREAS TO DO SAME THING, ALSO ADD RANDOM KEY FOR FILE STORAGE INSTEAD OF 'outputtemp.js'
-        app.simscript = rstr+".js"
-        with open("static/bokehscripts/"+app.simscript,"w") as file:
+        session['simscript'] = rstr+".js"
+        with open("static/bokehscripts/"+session['simscript'],"w") as file:
                 #remove JS tags
                 file.write(script[32:-9])
                 file.close()
 
         ######render
-        return render_template('pubview.html', searchstring=app.searchStr, script=app.simscript, div=app.simdiv, curpage=app.curpage, nav_id=app.nav_id, nav_name=app.nav_name)
+        return render_template('pubview.html', searchstring=session['vars']['searchStr'], script=session['simscript'], div=session['simdiv'], curpage=session['curpage'], nav_id=session['nav_id'], nav_name=session['nav_name'])
     else:
         ######render
-        return render_template('pubview.html', searchstring=app.searchStr, script=app.simscript, div=app.simdiv, curpage=app.curpage, nav_id=app.nav_id, nav_name=app.nav_name)
+        return render_template('pubview.html', searchstring=session['vars']['searchStr'], script=session['simscript'], div=session['simdiv'], curpage=session['curpage'], nav_id=session['nav_id'], nav_name=session['nav_name'])
 
 
 
 if __name__ == "__main__":
+    app.secret_key = 'VA&Dnadf8%$$#JK9SDA64asf54@!^&'
     app.run(port=33507)
