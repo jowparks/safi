@@ -62,7 +62,7 @@ def searchView():
         return render_template('pubsearch.html')
     else:
         app.vars = {}
-        app.vars['searchStr'] = request.form['searchterm']
+        app.searchStr = request.form['searchterm']
         return countsView()
 
 
@@ -86,7 +86,7 @@ def countsView():
 
         rstr = ''.join(random.choices(st.ascii_letters + st.digits, k=20))
         #app.yearplot = yearGraph(app.vars['searchStr'],1975,2017)
-        yearplot = pdp.yearGraph(app.vars['searchStr'],1975,2017)
+        yearplot = pdp.yearGraph(app.searchStr,1975,2017)
         script, app.yeardiv = components({'yearplot': yearplot})
 
         ###########MODIFY CODE IN OTHER AREAS TO DO SAME THING, ALSO ADD RANDOM KEY FOR FILE STORAGE INSTEAD OF 'outputtemp.js'
@@ -98,11 +98,11 @@ def countsView():
 
 
         ######render
-        return render_template('pubview.html', searchstring=app.vars['searchStr'], script=app.yearscript, div=app.yeardiv, curpage=app.curpage, nav_id=app.nav_id, nav_name=app.nav_name)
+        return render_template('pubview.html', searchstring=app.searchStr, script=app.yearscript, div=app.yeardiv, curpage=app.curpage, nav_id=app.nav_id, nav_name=app.nav_name)
     else:
 
         ######render
-        return render_template('pubview.html', searchstring=app.vars['searchStr'], script=app.yearscript, div=app.yeardiv, curpage=app.curpage, nav_id=app.nav_id, nav_name=app.nav_name)
+        return render_template('pubview.html', searchstring=app.searchStr, script=app.yearscript, div=app.yeardiv, curpage=app.curpage, nav_id=app.nav_id, nav_name=app.nav_name)
 
 
 
@@ -124,7 +124,7 @@ def geoView():
 
         rstr = ''.join(random.choices(st.ascii_letters + st.digits, k=20))
         #app.yearplot = yearGraph(app.vars['searchStr'],1975,2017)
-        stateplot = sg.stateGraph(app.vars['searchStr'],"1975/01/01","2016/12/31")
+        stateplot = sg.stateGraph(app.searchStr,"1975/01/01","2016/12/31")
         script, app.statediv = components({'stateplot': stateplot})
 
         ###########MODIFY CODE IN OTHER AREAS TO DO SAME THING, ALSO ADD RANDOM KEY FOR FILE STORAGE INSTEAD OF 'outputtemp.js'
@@ -136,11 +136,11 @@ def geoView():
 
 
         ######render
-        return render_template('pubview.html', searchstring=app.vars['searchStr'], script=app.statescript, div=app.statediv, curpage=app.curpage, nav_id=app.nav_id, nav_name=app.nav_name)
+        return render_template('pubview.html', searchstring=app.searchStr, script=app.statescript, div=app.statediv, curpage=app.curpage, nav_id=app.nav_id, nav_name=app.nav_name)
     else:
 
         ######render
-        return render_template('pubview.html', searchstring=app.vars['searchStr'], script=app.statescript, div=app.statediv, curpage=app.curpage, nav_id=app.nav_id, nav_name=app.nav_name)
+        return render_template('pubview.html', searchstring=app.searchStr, script=app.statescript, div=app.statediv, curpage=app.curpage, nav_id=app.nav_id, nav_name=app.nav_name)
 
 
 
@@ -157,7 +157,7 @@ def similarityView():
 
         rstr = ''.join(random.choices(st.ascii_letters + st.digits, k=20))
         #app.yearplot = yearGraph(app.vars['searchStr'],1975,2017)
-        simplot = smp.similarityGraph(app.vars['searchStr'],'1975', '2017')
+        simplot = smp.similarityGraph(app.searchStr,'1975', '2017')
         script, app.simdiv = components({'column_div': simplot})
 
         ###########MODIFY CODE IN OTHER AREAS TO DO SAME THING, ALSO ADD RANDOM KEY FOR FILE STORAGE INSTEAD OF 'outputtemp.js'
@@ -168,10 +168,10 @@ def similarityView():
                 file.close()
 
         ######render
-        return render_template('pubview.html', searchstring=app.vars['searchStr'], script=app.simscript, div=app.simdiv, curpage=app.curpage, nav_id=app.nav_id, nav_name=app.nav_name)
+        return render_template('pubview.html', searchstring=app.searchStr, script=app.simscript, div=app.simdiv, curpage=app.curpage, nav_id=app.nav_id, nav_name=app.nav_name)
     else:
         ######render
-        return render_template('pubview.html', searchstring=app.vars['searchStr'], script=app.simscript, div=app.simdiv, curpage=app.curpage, nav_id=app.nav_id, nav_name=app.nav_name)
+        return render_template('pubview.html', searchstring=app.searchStr, script=app.simscript, div=app.simdiv, curpage=app.curpage, nav_id=app.nav_id, nav_name=app.nav_name)
 
 
 
