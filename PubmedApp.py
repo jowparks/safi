@@ -26,8 +26,6 @@ import SimilarityPlot as smp
 app = Flask(__name__)
 app.secret_key = 'VA&Dnadf8%$$#JK9SDA64asf54@!^&'
 
-###app.vars = {}
-
 #setting up navigation info
 
 
