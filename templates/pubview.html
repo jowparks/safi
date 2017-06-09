@@ -4,6 +4,13 @@
 <link rel=stylesheet type=text/css href="{{ url_for('static',filename='styleview.css')}}">
 
 <head>
+  <!---->
+  <script type="text/javascript" src="{{url_for('static', filename = 'bokehscripts/'+script)}}"></script>
+  <!---->
+  <!--
+  {{ script | safe }}
+  -->
+
   <link rel="stylesheet" href="http://cdn.pydata.org/bokeh/release/bokeh-0.12.5.min.css" type="text/css" />
   <link rel="stylesheet" href="http://cdn.pydata.org/bokeh/release/bokeh-widgets-0.12.5.min.css" type="text/css" />
   <script type="text/javascript" src="http://cdn.pydata.org/bokeh/release/bokeh-0.12.5.min.js"></script>
@@ -38,7 +45,7 @@
       }
     }
   </script>
-  {{ script | safe }}
+
 
 </head>
 <div class="page">
