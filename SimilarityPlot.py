@@ -4,6 +4,9 @@ from aiohttp import ClientSession
 import asyncio
 import numpy as np
 import scipy.sparse as sp
+import colorsys
+import re
+
 
 import xml.etree.ElementTree as ET
 import requests
@@ -15,7 +18,7 @@ from sklearn.manifold import TSNE, SpectralEmbedding
 from bokeh.plotting import figure, show, output_notebook, ColumnDataSource
 from bokeh.layouts import column, layout
 from bokeh.models import HoverTool, CustomJS, OpenURL, TapTool, Range1d
-from bokeh.models.widgets import TextInput, Button
+from bokeh.models.widgets import TextInput, Button, DataTable, TableColumn
 #output_notebook()
 
 #Articles that a given article cites
@@ -328,6 +331,41 @@ def calcTSNE(X):
 
     return Y
 
+#for scaling color of graph
+def pseudocolor(val, minval, maxval):
+    # convert val in range minval..maxval to the range 240-360 degrees which
+    # correspond to the colors red..green in the HSV colorspace
+    maxc = 240
+    minc = 180
+    h = (maxc-minc)*(val-minval)/(maxval-minval)+minc
+    #reverse the values, comment to prevent reverse
+    h = abs(h-maxc)+minc
+    # convert hsv color (h,1,1) to its rgb equivalent
+    # note: the hsv_to_rgb() function expects h to be in the range 0..1 not 0..360
+    r, g, b = colorsys.hsv_to_rgb(h/360, 1., 1.)
+    return "rgb("+str(int(round(r*255)))+", "+str(int(round(g*255)))+", "+str(int(round(b*255)))+")"
+
+
+#function for scaling the sizes of the points in the plot based on input values
+def getScaledSizes(unscaled,minw,maxw):
+    unscaledi = list(map(int,unscaled))
+    umin = min(unscaledi)
+    umax = max(unscaledi)
+    scaled = [(maxw-minw)*(pt-umin)/(umax-umin)+minw for pt in unscaledi]
+    return scaled
+
+def getScaledColors(rawinput):
+    yearre = re.compile("([0-9]){4}")
+    inputi = []
+    for inp in rawinput:
+        #print(yearre.search(inp))
+        tyear = int(yearre.search(inp).group(0))
+        inputi.append(tyear)
+    mini = min(inputi)
+    maxi = max(inputi)
+    coloroutput = [pseudocolor(tin,mini,maxi) for tin in inputi]
+    return coloroutput
+
 # print("xmax "+str(np.amax(Y[:,0])))
 # print("xmin "+str(np.amin(Y[:,0])))
 # print("ymax "+str(np.amax(Y[:,1])))
@@ -355,14 +393,21 @@ def similarityGraph(si, sy, ey):
     print("Total Time:"+str(time.time()-pres))
 
 
-
     #convert authors list of lists to list of strings for display
     authors_str = []
     for auths in authors:
         authors_str.append(", ".join(auths))
 
+    #calcualte a scaled pt size based on citation quantity
+    minw = 8
+    maxw = 30
+    ptsizes = getScaledSizes(pmccites,minw,maxw)
 
-    colors = ['blue']*len(ids)
+
+    #create colors based on years published
+    colors = getScaledColors(dates)
+
+    #colors = ['blue']*len(ids)
     alphas = [1]*len(ids)
     source = ColumnDataSource(
             data=dict(
@@ -373,11 +418,73 @@ def similarityGraph(si, sy, ey):
                 authors=authors_str,
                 journals=journals,
                 dates=dates,
-                colors=colors,
                 alphas=alphas,
-                pmccites=pmccites
+                pmccites=pmccites,
+                ptsizes=ptsizes,
+                colors=colors,
+                colorsperm=colors
             )
         )
+
+    ########publication view table from selected on tsne plot
+    pubview_data = dict(
+        titles = ["Title"],
+        dates = ["Date"],
+        journals = ["Journal"],
+        authors = ["Author"],
+        pmccites = ["PMC Citations"],
+        PMID = ["pmids"]
+    )
+
+    pubview_source = ColumnDataSource(pubview_data)
+
+    pubview_columns = [
+            TableColumn(field="titles", title="Article Title",width = 400),
+            TableColumn(field="authors", title="Authors",width=50),
+            TableColumn(field="journals", title="Journal",width=50),
+            TableColumn(field="dates", title="Date",width = 80),
+            TableColumn(field="pmccites", title="PMC Citations", width =80),
+            TableColumn(field="PMID", title="PMIDS", width =0),
+        ]
+
+    pubview_table = DataTable(source=pubview_source, columns=pubview_columns, width=930, height=400)
+
+    source.callback = CustomJS(args=dict(pubview_table = pubview_table), code="""
+        var selecteddata = cb_obj.selected["1d"].indices
+        var count = 0
+        var s1 = cb_obj.get('data');
+        var d2 = pubview_table.get('source').get('data');
+        d2.index = []
+        d2.authors = []
+        d2.titles = []
+        d2.journals = []
+        d2.dates = []
+        d2.pmccites = []
+        d2.PMID = []
+        for(k = 0; k < selecteddata.length; k++){
+            tind = selecteddata[k]
+            d2.index.push(count)
+            d2.authors.push(s1.authors[tind])
+            d2.titles.push(s1.titles[tind])
+            d2.journals.push(s1.journals[tind])
+            d2.dates.push(s1.dates[tind])
+            d2.pmccites.push(parseInt(s1.pmccites[tind]))
+            d2.PMID.push(s1.PMID[tind])
+            count += 1
+        }
+        console.log(d2)
+        pubview_table.trigger('change');
+        """)
+
+    pubview_source.callback = CustomJS(code="""
+        var selecteddata = cb_obj.selected["1d"].indices
+        var s1 = cb_obj.get('data');
+        var url = "https://www.ncbi.nlm.nih.gov/pubmed/"+s1.PMID[selecteddata[0]]
+        window.open(url,'_blank');
+
+    """)
+    #######END TABLE DISPLAY CODE#####
+
 
     #####max-width IS IMPORTANT FOR PROPER WRAPPING OF TEXT
     hover = HoverTool(
@@ -407,7 +514,7 @@ def similarityGraph(si, sy, ey):
         var data = source.get('data')
         var titles = data['titles']
         for (i=0; i < titles.length; i++) {
-            data.colors[i]='blue'
+            data.colors[i]=data.colorsperm[i]
             data.alphas[i]= 1
         }
         source.trigger('change')
@@ -446,10 +553,10 @@ def similarityGraph(si, sy, ey):
     """)
 
 
-    TOOLS = 'pan,wheel_zoom,tap,reset'
-    p = figure(plot_width=900, plot_height=600, title="'"+si+"' tSNE similarity", tools=[TOOLS,hover], active_scroll='wheel_zoom')
+    TOOLS = 'pan,lasso_select,wheel_zoom,tap,reset'
+    p = figure(plot_width=900, plot_height=600, title="'"+si+"' tSNE similarity", tools=[TOOLS,hover], active_scroll='wheel_zoom', active_drag="lasso_select")
 
-    p.circle('x', 'y',fill_color='colors', fill_alpha='alphas', size=12, source=source)
+    p.circle('x', 'y',fill_color='colors', fill_alpha='alphas', size='ptsizes', source=source)
 
     #formatting plot
     p.xaxis.axis_label = "Hover to view publication info, Click to open Pubmed link"
@@ -463,16 +570,18 @@ def similarityGraph(si, sy, ey):
     p.x_range=Range1d(left, right)
     p.y_range=Range1d(bottom, top)
 
-
+    #tap tool callback
     url = "https://www.ncbi.nlm.nih.gov/pubmed/@PMID"
     taptool = p.select(type=TapTool)
     taptool.callback = OpenURL(url=url)
 
-
+    #work input callback
     word_input = TextInput(title="Search for term(s) in graph", placeholder="Enter term to highlight", callback=textCallback)
     reset = Button(label="Clear Highlighting", callback=resetCallback, width=150)
 
-    lt = layout([[word_input],[reset], [p]])
+
+
+    lt = layout([[word_input],[reset], [p],[pubview_table]])
 
     return lt
 

@@ -123,7 +123,8 @@ def yearGraph(si,sy,ey):
         dates = dates,
         journals = journals,
         authors = authors_str,
-        pmccites = pmccites
+        pmccites = pmccites,
+        PMID = ids
     )
 
     pubview_data = dict(
@@ -131,7 +132,8 @@ def yearGraph(si,sy,ey):
         dates = ["Date"],
         journals = ["Journal"],
         authors = ["Author"],
-        pmccites = ["PMC Citations"]
+        pmccites = ["PMC Citations"],
+        PMID = ["PMID"]
     )
     #publication table that will be populated by
 
@@ -197,6 +199,7 @@ def yearGraph(si,sy,ey):
         d2.journals = []
         d2.dates = []
         d2.pmccites = []
+        d2.PMID = []
         for(j = 0; j < d1.authors.length; j++){
             for(k = 0; k < authordata.length; k++){
                 if (d1.authors[j].toLowerCase().indexOf(s1.auths[authordata[k]].toLowerCase()) !== -1) {
@@ -206,6 +209,7 @@ def yearGraph(si,sy,ey):
                     d2.journals.push(d1.journals[j])
                     d2.dates.push(d1.dates[j])
                     d2.pmccites.push(parseInt(d1.pmccites[j]))
+                    d2.PMID.push(d1.PMID[j])
                     count += 1
                     break;
                 }
@@ -228,6 +232,7 @@ def yearGraph(si,sy,ey):
         d2.journals = []
         d2.dates = []
         d2.pmccites = []
+        d2.PMID = []
         for(j = 0; j < d1.authors.length; j++){
             for(k = 0; k < authordata.length; k++){
                 if (d1.authors[j].toLowerCase().indexOf(s1.authscites[authordata[k]].toLowerCase()) !== -1) {
@@ -237,6 +242,7 @@ def yearGraph(si,sy,ey):
                     d2.journals.push(d1.journals[j])
                     d2.dates.push(d1.dates[j])
                     d2.pmccites.push(parseInt(d1.pmccites[j]))
+                    d2.PMID.push(d1.PMID[j])
                     count += 1
                     break;
                 }
@@ -258,6 +264,7 @@ def yearGraph(si,sy,ey):
         d2.journals = []
         d2.dates = []
         d2.pmccites = []
+        d2.PMID = []
         for(j = 0; j < d1.journals.length; j++){
             for(k = 0; k < journaldata.length; k++){
                 //checks to make sure journal name exists, seems like certain publications have no journal name in pubmed
@@ -269,6 +276,7 @@ def yearGraph(si,sy,ey):
                         d2.journals.push(d1.journals[j])
                         d2.dates.push(d1.dates[j])
                         d2.pmccites.push(parseInt(d1.pmccites[j]))
+                        d2.PMID.push(d1.PMID[j])
                         count += 1
                         break;
                     }
@@ -279,6 +287,14 @@ def yearGraph(si,sy,ey):
         pubview_table.trigger('change');
         """)
 
+
+    pubview_source.callback = CustomJS(code="""
+        var selecteddata = cb_obj.selected["1d"].indices
+        var s1 = cb_obj.get('data');
+        var url = "https://www.ncbi.nlm.nih.gov/pubmed/"+s1.PMID[selecteddata[0]]
+        window.open(url,'_blank');
+
+    """)
     ###### write callbacks for other two tables as well
 
 
