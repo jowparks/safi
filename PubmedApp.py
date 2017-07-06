@@ -35,6 +35,7 @@ def index():
     # nquestions=app_lulu.nquestions
     if request.method == 'GET':
 
+        #### CHANGE TO ORDERED DICT OR LIST SO THAT INFO IS SENT IN ORDER, NAV ORDER IS CHANGING AFTER PAGE LOAD
         session['nav_id'] = {'counts':'counts','geo':'geo','similarity':'similarity'}
         session['nav_name'] = {'counts':'Raw Counts','geo':'Geographic','similarity':'Visualize Article Similarity'}
 
@@ -101,11 +102,11 @@ def countsView():
 
 
         ######render
-        return render_template('pubview.html', searchstring=session['vars']['searchStr'], script=session['yearscript'], div=session['yeardiv'], curpage=session['curpage'], nav_id=session['nav_id'], nav_name=session['nav_name'])
+        return render_template('pubview.html', searchstring=session['vars']['searchStr'], script=script, div=session['yeardiv'], curpage=session['curpage'], nav_id=session['nav_id'], nav_name=session['nav_name'],firstload="True")
     else:
 
         ######render
-        return render_template('pubview.html', searchstring=session['vars']['searchStr'], script=session['yearscript'], div=session['yeardiv'], curpage=session['curpage'], nav_id=session['nav_id'], nav_name=session['nav_name'])
+        return render_template('pubview.html', searchstring=session['vars']['searchStr'], script=session['yearscript'], div=session['yeardiv'], curpage=session['curpage'], nav_id=session['nav_id'], nav_name=session['nav_name'],firstload="False")
 
 
 
@@ -143,11 +144,11 @@ def geoView():
 
 
         ######render
-        return render_template('pubview.html', searchstring=session['vars']['searchStr'], script=session['statescript'], div=session['statediv'], curpage=session['curpage'], nav_id=session['nav_id'], nav_name=session['nav_name'])
+        return render_template('pubview.html', searchstring=session['vars']['searchStr'], script=script, div=session['statediv'], curpage=session['curpage'], nav_id=session['nav_id'], nav_name=session['nav_name'],firstload="True")
     else:
 
         ######render
-        return render_template('pubview.html', searchstring=session['vars']['searchStr'], script=session['statescript'], div=session['statediv'], curpage=session['curpage'], nav_id=session['nav_id'], nav_name=session['nav_name'])
+        return render_template('pubview.html', searchstring=session['vars']['searchStr'], script=session['statescript'], div=session['statediv'], curpage=session['curpage'], nav_id=session['nav_id'], nav_name=session['nav_name'],firstload="False")
 
 
 
@@ -180,10 +181,10 @@ def similarityView():
                 file.close()
 
         ######render, render with script instead of simscript first time, fixes issue with gcloud not loading file when it is generated immediately
-        return render_template('pubview.html', searchstring=session['vars']['searchStr'], script=script, div=session['simdiv'], curpage=session['curpage'], nav_id=session['nav_id'], nav_name=session['nav_name'])
+        return render_template('pubview.html', searchstring=session['vars']['searchStr'], script=script, div=session['simdiv'], curpage=session['curpage'], nav_id=session['nav_id'], nav_name=session['nav_name'],firstload="True")
     else:
         ######render
-        return render_template('pubview.html', searchstring=session['vars']['searchStr'], script=session['simscript'], div=session['simdiv'], curpage=session['curpage'], nav_id=session['nav_id'], nav_name=session['nav_name'])
+        return render_template('pubview.html', searchstring=session['vars']['searchStr'], script=session['simscript'], div=session['simdiv'], curpage=session['curpage'], nav_id=session['nav_id'], nav_name=session['nav_name'],firstload="False")
 
 
 
