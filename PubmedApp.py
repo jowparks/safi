@@ -3,7 +3,7 @@
 
 
 import string as st
-import random
+import random as rnd
 from flask import Flask, render_template, request, redirect, session
 from bokeh.embed import components
 import PubDatePlotting as pdp
@@ -84,7 +84,7 @@ def countsView():
 #             except:
 #                 print("Error getting year data")
 
-        rstr = ''.join(random.choices(st.ascii_letters + st.digits, k=20))
+        rstr = ''.join(rnd.choices(st.ascii_letters + st.digits, k=20))
         #app.yearplot = yearGraph(app.vars['searchStr'],1975,2017)
         yearplot = pdp.yearGraph(session['vars']['searchStr'],1975,2017)
         script, session['yeardiv'] = components({'yearplot': yearplot})
@@ -122,7 +122,7 @@ def geoView():
 #                 print("Error getting state data")
         #app.stateplot = stateGraph(app.vars['searchStr'],"1975/01/01","2016/12/31")
 
-        rstr = ''.join(random.choices(st.ascii_letters + st.digits, k=20))
+        rstr = ''.join(rnd.choices(st.ascii_letters + st.digits, k=20))
         #app.yearplot = yearGraph(app.vars['searchStr'],1975,2017)
         stateplot = sg.stateGraph(session['vars']['searchStr'],"1975/01/01","2016/12/31")
         script, session['statediv'] = components({'stateplot': stateplot})
@@ -155,7 +155,7 @@ def similarityView():
         #app.simplot = smp.similarityGraph(app.vars['searchStr'], '1975', '2017')
         #app.script, app.div = components({'column_div': app.simplot})
 
-        rstr = ''.join(random.choices(st.ascii_letters + st.digits, k=20))
+        rstr = ''.join(rnd.choices(st.ascii_letters + st.digits, k=20))
         #app.yearplot = yearGraph(app.vars['searchStr'],1975,2017)
         simplot = smp.similarityGraph(session['vars']['searchStr'],'1975', '2017')
         script, session['simdiv'] = components({'column_div': simplot})
