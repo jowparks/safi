@@ -4,6 +4,7 @@
 
 import string as st
 import random as rnd
+print(rnd.__file__)
 from flask import Flask, render_template, request, redirect, session
 from bokeh.embed import components
 import PubDatePlotting as pdp
