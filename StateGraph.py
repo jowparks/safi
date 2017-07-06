@@ -2,6 +2,7 @@
 
 # StateGraph -  used to pull data from pubmed through an api
 from aiohttp import ClientSession
+from aiohttp import TCPConnector
 import asyncio
 import urllib
 from urllib.parse import quote
@@ -42,7 +43,7 @@ async def runStates(states, ss, sd, ed):
 
     # Fetch all responses within one Client session,
     # keep connection alive for all requests.
-    async with ClientSession() as session:
+    async with ClientSession(connector = TCPConnector(limit=10)) as session:
         for state in states:
             tu = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=" + state + searchField+"+AND+"+ss+"&mindate="+sd+"&maxdate="+ed+"&usehistory=y&retmode=json"
             task = asyncio.ensure_future(fetchStates(tu, session))

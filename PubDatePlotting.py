@@ -8,9 +8,10 @@ import xml.etree.ElementTree as ET
 import pandas as pd
 
 from aiohttp import ClientSession
+from aiohttp import TCPConnector
 from urllib.parse import quote
 from collections import Counter
-from bokeh.models.widgets import DataTable, DateFormatter, TableColumn, Div
+from bokeh.models.widgets import DataTable, DateFormatter, TableColumn, Div, HTMLTemplateFormatter
 from bokeh.models import CustomJS
 from bokeh.plotting import figure, show, output_notebook, ColumnDataSource
 from bokeh.layouts import layout
@@ -26,7 +27,7 @@ async def runYears(yrs, ss):
 
     # Fetch all responses within one Client session,
     # keep connection alive for all requests.
-    async with ClientSession() as session:
+    async with ClientSession(connector = TCPConnector(limit=10)) as session:
         for y in yrs:
             tu = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term="+ss+"&mindate="+str(y)+"/01/01&maxdate="+str(y)+"/12/31&usehistory=y&retmode=json&retmax=100000"
             task = asyncio.ensure_future(fetchYears(tu, session))
@@ -158,8 +159,17 @@ def yearGraph(si,sy,ey):
             TableColumn(field="journals", title="Journal", width=220),
         ]
 
+
+    template="""
+    <div style="background:red
+        color: white">
+    <%= value %>\ninfo</div>
+    """
+
+    formatter =  HTMLTemplateFormatter(template=template)
+
     pubview_columns = [
-            TableColumn(field="titles", title="Article Title"),
+            TableColumn(field="titles", title="Article Title",formatter=formatter),
             TableColumn(field="authors", title="Authors"),
             TableColumn(field="journals", title="Journal"),
             TableColumn(field="dates", title="Date",width = 80),
@@ -178,6 +188,7 @@ def yearGraph(si,sy,ey):
     spacer2 = figure(plot_width=50, plot_height=210, logo = None, toolbar_location = None, outline_line_color = None)
 
     #create table updated by clicks in above tables, for viewing related publications
+
 
     pubview_table = DataTable(source=pubview_source, columns=pubview_columns, width=930, height=400)
 

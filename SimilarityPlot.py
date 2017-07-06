@@ -1,6 +1,9 @@
 ########Similarity plotting of search
-import time
+
 from aiohttp import ClientSession
+from aiohttp import TCPConnector
+
+import time
 import asyncio
 import numpy as np
 import scipy.sparse as sp
@@ -100,7 +103,7 @@ async def runCited(url,ids):
 
     # Fetch all responses within one Client session,
     # keep connection alive for all requests.
-    async with ClientSession() as session:
+    async with ClientSession(connector = TCPConnector(limit=10)) as session:
         for ix in ids:
             post_vars = {"dbfrom":"pubmed", "linkname":"pubmed_pubmed_refs"}
             post_vars["id"] = ix;
