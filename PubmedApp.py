@@ -179,8 +179,8 @@ def similarityView():
                 file.write(script[32:-9])
                 file.close()
 
-        ######render
-        return render_template('pubview.html', searchstring=session['vars']['searchStr'], script=session['simscript'], div=session['simdiv'], curpage=session['curpage'], nav_id=session['nav_id'], nav_name=session['nav_name'])
+        ######render, render with script instead of simscript first time, fixes issue with gcloud not loading file when it is generated immediately
+        return render_template('pubview.html', searchstring=session['vars']['searchStr'], script=script, div=session['simdiv'], curpage=session['curpage'], nav_id=session['nav_id'], nav_name=session['nav_name'])
     else:
         ######render
         return render_template('pubview.html', searchstring=session['vars']['searchStr'], script=session['simscript'], div=session['simdiv'], curpage=session['curpage'], nav_id=session['nav_id'], nav_name=session['nav_name'])
