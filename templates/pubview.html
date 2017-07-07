@@ -69,7 +69,7 @@
     <ul>
       {% for item in nav_id %}
       <form id='nav_form' method='post' action="/{{ item }}" method="post">
-        <li class={% if curpage == item %}"active"{% else %}"inactive"{% endif %}><a href="javascript:;" onclick="parentNode.parentNode.submit(); showDiv('loadingImg'); hideDiv('data_container');">{{ nav_name[item] }}</a></li>
+        <li class={% if curpage == item %}"active"{% else %}"inactive"{% endif %}><a href="javascript:;" onclick="parentNode.parentNode.submit(); showDiv('loadingImg'); hideDiv('data_container');">{{ nav_name[loop.index0] }}</a></li>
       </form>
       {% endfor %}
     </ul>

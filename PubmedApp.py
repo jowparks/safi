@@ -36,8 +36,10 @@ def index():
     if request.method == 'GET':
 
         #### CHANGE TO ORDERED DICT OR LIST SO THAT INFO IS SENT IN ORDER, NAV ORDER IS CHANGING AFTER PAGE LOAD
-        session['nav_id'] = {'counts':'counts','geo':'geo','similarity':'similarity'}
-        session['nav_name'] = {'counts':'Raw Counts','geo':'Geographic','similarity':'Visualize Article Similarity'}
+        #session['nav_id'] = {'counts':'counts','geo':'geo','similarity':'similarity'}
+        #session['nav_name'] = {'counts':'Raw Counts','geo':'Geographic','similarity':'Visualize Article Similarity'}
+        session['nav_id'] = ['counts','geo','similarity']
+        session['nav_name'] = ['Raw Counts','Geographic','Visualize Article Similarity']
 
         return render_template('pubsearch.html')
     else:
