@@ -4,7 +4,6 @@
 from threading import Thread
 from queue import Queue
 
-import sys
 import time
 import asyncio
 import string as st
