@@ -8,11 +8,19 @@
 
   <!-- If statement below is a hack that I used to bypass the file not being loaded on initial load, gcloud wasn't finding the file
   directly after creation, took a few seconds, so I load script directly into page instead first time, reloading page uses the saved file -->
-
-  {% if firstload == "True" %}
-    {{ script | safe }}
+  {% if script != "" %}
+    {% if firstload == "True" %}
+      {{ script | safe }}
+    {% else %}
+      <script type="text/javascript" src="{{url_for('static', filename = 'bokehscripts/'+script)}}"></script>
+    {% endif %}
   {% else %}
-  <script type="text/javascript" src="{{url_for('static', filename = 'bokehscripts/'+script)}}"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+  <script>
+    $(document).ready(function(){
+      $('<form method="post" action="/similarity"></form>').appendTo('body').submit();
+    });
+  </script>
   {% endif %}
 
   <link rel="stylesheet" href="http://cdn.pydata.org/bokeh/release/bokeh-0.12.5.min.css" type="text/css" />
@@ -21,6 +29,7 @@
   <script type="text/javascript" src="http://cdn.pydata.org/bokeh/release/bokeh-widgets-0.12.5.min.js"></script>
   <script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/lodash.js/0.10.0/lodash.min.js"></script>
   <script type="text/javascript">
+
     function Expand(obj) {
       if (!obj.savesize) obj.savesize = obj.size;
       obj.size = Math.max(obj.savesize, obj.value.length);
@@ -68,7 +77,7 @@
     </form>
     <ul>
       {% for item in nav_id %}
-      <form id='nav_form' method='post' action="/{{ item }}" method="post">
+      <form id='nav_form' method='post' action="/{{ item }}">
         <li class={% if curpage == item %}"active"{% else %}"inactive"{% endif %}><a href="javascript:;" onclick="parentNode.parentNode.submit(); showDiv('loadingImg'); hideDiv('data_container');">{{ nav_name[loop.index0] }}</a></li>
       </form>
       {% endfor %}
@@ -91,7 +100,7 @@
   <!-- End state graph page -->
   <!-- Similarity page -->
   {% if curpage == "similarity" %}
-    {{ div.column_div | safe }}
+    {{ div.simplot | safe }}
   {% endif %}
   <!-- End similarity page -->
   </div>

@@ -117,7 +117,7 @@ async def runCited(url,ids):
         #print(json.loads(responses[0]))
     return responses
 
-def getCitedFromPMIDs(rids):
+def getCitedFromPMIDs(rids, lp):
     ids = []
     cids = []
 
@@ -135,9 +135,9 @@ def getCitedFromPMIDs(rids):
     pre = time.time()
 
     #get the async references, connecs can fail, try 10 times before error
-    loop = asyncio.get_event_loop()
+    asyncio.set_event_loop(lp)
     future = asyncio.ensure_future(runCited(cited_post,rids))
-    res = loop.run_until_complete(future)
+    res = lp.run_until_complete(future)
 
     print("References Retrieved:"+str(time.time()-pre))
 
@@ -373,7 +373,7 @@ def getScaledColors(rawinput):
 # print("xmin "+str(np.amin(Y[:,0])))
 # print("ymax "+str(np.amax(Y[:,1])))
 # print("ymin "+str(np.amin(Y[:,1])))
-def similarityGraph(si, sy, ey):
+def similarityGraph(si, sy, ey, lp):
     pres = time.time()
     ss = quote(si)
 
@@ -381,7 +381,7 @@ def similarityGraph(si, sy, ey):
     rids = PMIDsFromSearch(ss, sy, ey)
 
     print("Getting Cited PMIDs")
-    ids, cids = getCitedFromPMIDs(rids)
+    ids, cids = getCitedFromPMIDs(rids, lp)
 
     print("Getting Info of PMIDs")
     titles, dates, authors, journals, pmccites = getPMIDInfo(ids)

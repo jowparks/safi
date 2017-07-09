@@ -1,16 +1,11 @@
 ###Main page: PubmedApp
 #mainspot
 
-from threading import Thread
-from queue import Queue
 
-import sys
-import time
-import asyncio
 import string as st
 import random as rnd
 print(rnd.__file__)
-from flask import Flask, render_template, request, redirect, session, url_for
+from flask import Flask, render_template, request, redirect, session
 from bokeh.embed import components
 import PubDatePlotting as pdp
 import StateGraph as sg
@@ -31,9 +26,6 @@ import SimilarityPlot as smp
 
 app = Flask(__name__)
 app.secret_key = 'VA&Dnadf8%$$#JK9SDA64asf54@!^&'
-
-q2 = Queue()
-loop = asyncio.get_event_loop()
 
 #setting up navigation info
 
@@ -103,6 +95,7 @@ def countsView():
         yearplot = pdp.yearGraph(session['vars']['searchStr'],1975,2017)
         script, session['yeardiv'] = components({'yearplot': yearplot})
 
+        ###########MODIFY CODE IN OTHER AREAS TO DO SAME THING, ALSO ADD RANDOM KEY FOR FILE STORAGE INSTEAD OF 'outputtemp.js'
         session['yearscript'] = rstr+".js"
         with open("static/bokehscripts/"+session['yearscript'],"w") as file:
                 #remove JS tags
@@ -160,86 +153,37 @@ def geoView():
         return render_template('pubview.html', searchstring=session['vars']['searchStr'], script=session['statescript'], div=session['statediv'], curpage=session['curpage'], nav_id=session['nav_id'], nav_name=session['nav_name'],firstload="False")
 
 
-def similarityCalc(ss,sy,ey,lp):
-    rstr = ''
-    for idx in range(20):
-        rstr += rnd.choice(st.ascii_letters + st.digits)
 
-    #rstr = ''.join(rnd.choices(st.ascii_letters + st.digits, k=20))
-    #app.yearplot = yearGraph(app.vars['searchStr'],1975,2017)
-
-    # ss = q1.get()
-    # sy = q1.get()
-    # ey = q1.get()
-
-    print((ss,sy,ey),flush=True)
-
-    simplot = smp.similarityGraph(ss,sy,ey,lp)
-    script, outdiv = components({'simplot': simplot})
-
-    ###########MODIFY CODE IN OTHER AREAS TO DO SAME THING, ALSO ADD RANDOM KEY FOR FILE STORAGE INSTEAD OF 'outputtemp.js'
-    outscript = rstr+".js"
-
-    with open("static/bokehscripts/"+outscript,"w") as file:
-            #remove JS tags
-            file.write(script[32:-9])
-            file.close()
-    print("Finished sim calc", flush=True)
-
-    global q2
-    q2.put(outdiv)
-    q2.put(outscript)
 
 @app.route('/similarity', methods=['POST'])
 def similarityView():
     session['curpage'] = "similarity"
     if 'similarity' not in session['vars']:
-        # session['vars']['similarity'] = True
-        if 'calcsim' not in session['vars']:
+        session['vars']['similarity'] = True
 
-            global loop
+        #app.simplot = similarityGraph(app.vars['searchStr'], '1975', '2017')
+        #app.simplot = smp.similarityGraph(app.vars['searchStr'], '1975', '2017')
+        #app.script, app.div = components({'column_div': app.simplot})
 
-            print("calc sim")
-            # q1.put(session['vars']['searchStr'])
-            # q1.put('1975')
-            # q1.put('2017')
-            t = Thread(target=similarityCalc,args=(session['vars']['searchStr'],'1975','2017',loop))
-            t.start()
-            session['vars']['calcsim'] = True
-        else:
-            print("waiting to reload")
-            time.sleep(5)
 
-        # rstr = ''
-        # for idx in range(20):
-        #     rstr += rnd.choice(st.ascii_letters + st.digits)
-        #
-        # #rstr = ''.join(rnd.choices(st.ascii_letters + st.digits, k=20))
-        # #app.yearplot = yearGraph(app.vars['searchStr'],1975,2017)
-        # simplot = smp.similarityGraph(session['vars']['searchStr'],'1975', '2017')
-        # script, session['simdiv'] = components({'column_div': simplot})
-        #
-        # ###########MODIFY CODE IN OTHER AREAS TO DO SAME THING, ALSO ADD RANDOM KEY FOR FILE STORAGE INSTEAD OF 'outputtemp.js'
-        # session['simscript'] = rstr+".js"
-        # with open("static/bokehscripts/"+session['simscript'],"w") as file:
-        #         #remove JS tags
-        #         file.write(script[32:-9])
-        #         file.close()
+        rstr = ''
+        for idx in range(20):
+            rstr += rnd.choice(st.ascii_letters + st.digits)
+
+        #rstr = ''.join(rnd.choices(st.ascii_letters + st.digits, k=20))
+        #app.yearplot = yearGraph(app.vars['searchStr'],1975,2017)
+        simplot = smp.similarityGraph(session['vars']['searchStr'],'1975', '2017')
+        script, session['simdiv'] = components({'column_div': simplot})
+
+        ###########MODIFY CODE IN OTHER AREAS TO DO SAME THING, ALSO ADD RANDOM KEY FOR FILE STORAGE INSTEAD OF 'outputtemp.js'
+        session['simscript'] = rstr+".js"
+        with open("static/bokehscripts/"+session['simscript'],"w") as file:
+                #remove JS tags
+                file.write(script[32:-9])
+                file.close()
 
         ######render, render with script instead of simscript first time, fixes issue with gcloud not loading file when it is generated immediately
-        if q2.empty():
-            print("Reloaded, waiting for queue generation")
-            script = ""
-
-            #waiting for calculations to finish, load dummy info into the page
-            waiting = {"simplot":"<br><br><br><center><b>Similarity Plot is being calculated, page will load when completed.</b><br><img src='/static/loading.gif' /></center>"}
-            return render_template('pubview.html', searchstring=session['vars']['searchStr'], script=script, div=waiting, curpage=session['curpage'], nav_id=session['nav_id'], nav_name=session['nav_name'],firstload="False")
-        else:
-            print("Q2 found")
-            session['simdiv'] = q2.get()
-            session['simscript'] = q2.get()
-            session['vars']['similarity'] = True
-            return render_template('pubview.html', searchstring=session['vars']['searchStr'], script=session['simscript'], div=session['simdiv'], curpage=session['curpage'], nav_id=session['nav_id'], nav_name=session['nav_name'],firstload="False")
+        return render_template('pubview.html', searchstring=session['vars']['searchStr'], script=script, div=session['simdiv'], curpage=session['curpage'], nav_id=session['nav_id'], nav_name=session['nav_name'],firstload="True")
     else:
         ######render
         return render_template('pubview.html', searchstring=session['vars']['searchStr'], script=session['simscript'], div=session['simdiv'], curpage=session['curpage'], nav_id=session['nav_id'], nav_name=session['nav_name'],firstload="False")
