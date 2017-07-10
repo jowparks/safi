@@ -31,7 +31,8 @@ import SimilarityPlot as smp
 app = Flask(__name__)
 app.secret_key = 'VA&Dnadf8%$$#JK9SDA64asf54@!^&'
 
-q2 = Queue()
+dq = {}
+#q2 = Queue()
 loop = asyncio.get_event_loop()
 
 #setting up navigation info
@@ -159,7 +160,7 @@ def geoView():
         return render_template('pubview.html', searchstring=session['vars']['searchStr'], script=session['statescript'], div=session['statediv'], curpage=session['curpage'], nav_id=session['nav_id'], nav_name=session['nav_name'],firstload="False")
 
 
-def similarityCalc(ss,sy,ey,lp):
+def similarityCalc(ss,sy,ey,lp,qs):
     rstr = ''
     for idx in range(20):
         rstr += rnd.choice(st.ascii_letters + st.digits)
@@ -185,24 +186,34 @@ def similarityCalc(ss,sy,ey,lp):
             file.close()
     print("Finished sim calc", flush=True)
 
-    global q2
-    q2.put(outdiv)
-    q2.put(outscript)
+    global dq
+    dq[qs].put(outdiv)
+    dq[qs].put(outscript)
 
 @app.route('/similarity', methods=['POST'])
 def similarityView():
+
+    global loop
+    global dq
+
     session['curpage'] = "similarity"
     if 'similarity' not in session['vars']:
         # session['vars']['similarity'] = True
         if 'calcsim' not in session['vars']:
 
-            global loop
+
+
+            rstr = ''
+            for idx in range(20):
+                rstr += rnd.choice(st.ascii_letters + st.digits)
+
+            #create new queue for each user, save in global dict and give reference to local session
+            dq[rstr] = Queue()
+            session['vars']['qs'] = rstr
 
             print("calc sim")
-            # q1.put(session['vars']['searchStr'])
-            # q1.put('1975')
-            # q1.put('2017')
-            t = Thread(target=similarityCalc,args=(session['vars']['searchStr'],'1975','2017',loop))
+
+            t = Thread(target=similarityCalc,args=(session['vars']['searchStr'],'1975','2017',loop,session['vars']['qs']))
             t.start()
             session['vars']['calcsim'] = True
         else:
@@ -226,7 +237,7 @@ def similarityView():
         #         file.close()
 
         ######render, render with script instead of simscript first time, fixes issue with gcloud not loading file when it is generated immediately
-        if q2.empty():
+        if dq[session['vars']['qs']].empty():
             print("Reloaded, waiting for queue generation")
             script = ""
 
@@ -234,9 +245,13 @@ def similarityView():
             waiting = {"simplot":"<br><br><br><center><b>Similarity Plot is being calculated, page will load when completed.</b><br><img src='/static/loading.gif' /></center>"}
             return render_template('pubview.html', searchstring=session['vars']['searchStr'], script=script, div=waiting, curpage=session['curpage'], nav_id=session['nav_id'], nav_name=session['nav_name'],firstload="False")
         else:
-            print("Q2 found")
-            session['simdiv'] = q2.get()
-            session['simscript'] = q2.get()
+            print("Queue found")
+            session['simdiv'] = dq[session['vars']['qs']].get()
+            session['simscript'] = dq[session['vars']['qs']].get()
+            #finished with queue, remove
+            del dq[session['vars']['qs']]
+
+            #similarity info finished calculating, save for future
             session['vars']['similarity'] = True
             return render_template('pubview.html', searchstring=session['vars']['searchStr'], script=session['simscript'], div=session['simdiv'], curpage=session['curpage'], nav_id=session['nav_id'], nav_name=session['nav_name'],firstload="False")
     else:
