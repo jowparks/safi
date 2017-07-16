@@ -15,13 +15,20 @@ import xml.etree.ElementTree as ET
 import requests
 from math import ceil
 from urllib.parse import quote
+
+import pickle
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.cluster import KMeans
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.decomposition import TruncatedSVD
 from sklearn.manifold import TSNE, SpectralEmbedding
+
 from bokeh.plotting import figure, show, output_notebook, ColumnDataSource
 from bokeh.layouts import column, layout
 from bokeh.models import HoverTool, CustomJS, OpenURL, TapTool, Range1d
-from bokeh.models.widgets import TextInput, Button, DataTable, TableColumn
+from bokeh.models.widgets import TextInput, Button, DataTable, TableColumn, Slider, Div
+from bokeh.models.glyphs import Text
+
 #output_notebook()
 
 #Articles that a given article cites
@@ -322,15 +329,14 @@ def calcTSNE(X):
         print("TSNE calc")
         pre = time.time()
         tsn = TSNE(n_components=2, random_state=0)
-        Y = tsn.fit_transform(Xr);
+        Y = tsn.fit_transform(Xr)
         print("TSNE time:"+str(time.time()-pre))
     else:
         print("TSNE calc")
         tsn = TSNE(n_components=2, random_state=0)
 
-        pre = time.time()
         Y = tsn.fit_transform(X);
-        print("TSNE time:"+str(time.time()-pre))
+
 
     return Y
 
@@ -350,8 +356,7 @@ def pseudocolor(val, minval, maxval):
 
 
 #function for scaling the sizes of the points in the plot based on input values
-def getScaledSizes(unscaled,minw,maxw):
-    unscaledi = list(map(int,unscaled))
+def getScaledSizes(unscaledi,minw,maxw):
     umin = min(unscaledi)
     umax = max(unscaledi)
     scaled = [(maxw-minw)*(pt-umin)/(umax-umin)+minw for pt in unscaledi]
@@ -368,6 +373,34 @@ def getScaledColors(rawinput):
     maxi = max(inputi)
     coloroutput = [pseudocolor(tin,mini,maxi) for tin in inputi]
     return coloroutput
+
+
+def kmeansClustering(pts,nc):
+    kms = KMeans(n_clusters=nc, random_state=0).fit(pts)
+    return kms.cluster_centers_,kms.labels_
+
+def tfidfClusters(clusts,tits):
+    combclusts = []
+    for cid in list(set(clusts)):
+        ts = []
+
+        for idx,cn in enumerate(clusts):
+            if(cn == cid):
+                ts.append(tits[idx])
+
+        combclusts.append(" ".join(ts))
+    tf = TfidfVectorizer(analyzer='word', ngram_range=(1,2), min_df=2, max_df=len(combclusts)-1,stop_words = 'english')
+    tfidf_matrix =  tf.fit_transform(combclusts)
+
+    feature_array = np.array(tf.get_feature_names())
+    # print(feature_array[:5])
+    # print(tfidf_matrix.toarray())
+    # tfidf_sorting = np.argsort(tfidf_matrix.toarray()).flatten()[::-1]
+    topn = feature_array[np.argmax(tfidf_matrix.toarray(),axis=1)]
+    # print("np features:")
+    # print(topn)
+    # print(len(feature_array))
+    return topn
 
 # print("xmax "+str(np.amax(Y[:,0])))
 # print("xmin "+str(np.amin(Y[:,0])))
@@ -392,8 +425,32 @@ def similarityGraph(si, sy, ey, lp):
     print("Cosine similarity time:"+str(time.time()-pre))
 
     print("Performing TSNE")
+    pre = time.time()
     Y = calcTSNE(carr)
+    print("TSNE time:"+str(time.time()-pre))
+
+
+
+    print("Performing Kmeans TFIDF Clustering")
+    #print("Performing TF-IDF on Clusters")
+    pre = time.time()
+    kcenters = []
+    topwords = []
+
+    minc = 7
+    maxc = 20
+    for idx in list(range(minc,maxc)):
+        kc, cof = kmeansClustering(Y,idx)
+        kcenters.append(kc)
+
+        tw = tfidfClusters(cof,titles)
+        topwords.append(tw)
+    print("TF-IDF Kmeans Time:"+str(time.time()-pre))
+
+
     print("Total Time:"+str(time.time()-pres))
+
+
 
 
     #convert authors list of lists to list of strings for display
@@ -404,7 +461,10 @@ def similarityGraph(si, sy, ey, lp):
     #calcualte a scaled pt size based on citation quantity
     minw = 8
     maxw = 30
-    ptsizes = getScaledSizes(pmccites,minw,maxw)
+
+    # with open('citespkl.p','wb') as f:
+    #     pickle.dump(list(map(int,pmccites)),f)
+    ptsizes = getScaledSizes(list(map(int,pmccites)),minw,maxw)
 
 
     #create colors based on years published
@@ -522,7 +582,7 @@ def similarityGraph(si, sy, ey, lp):
         }
         source.trigger('change')
     """)
-
+    #move function from reset callback to below so stuff updates automatically on textbox change
     textCallback = CustomJS(args=dict(source=source), code="""
         var data = source.get('data')
         var value = cb_obj.get('value')
@@ -561,6 +621,41 @@ def similarityGraph(si, sy, ey, lp):
 
     p.circle('x', 'y',fill_color='colors', fill_alpha='alphas', size='ptsizes', source=source)
 
+    #word labeles for plots
+    wordsources = []
+    for idx in list(range(len(topwords))):
+        wordsources.append(ColumnDataSource(dict(x=kcenters[idx][:,0], y=kcenters[idx][:,1], text=topwords[idx])))
+
+    wordglyph = Text(x="x", y="y", text="text", text_color="#000000",text_font_style="bold")
+    #3 is used for initial slider set below
+    initialclust = 3
+    wordholdsource = ColumnDataSource(dict(x=kcenters[initialclust][:,0], y=kcenters[initialclust][:,1], text=topwords[initialclust]))
+    p.add_glyph(wordholdsource, wordglyph)
+
+    # source = ColumnDataSource(data=dict(x=x, y=y))
+    #
+    # plot = Figure(plot_width=400, plot_height=400)
+    # plot.line('x', 'y', source=source, line_width=3, line_alpha=0.6)
+    args = {}
+    args["wordholdsource"] = wordholdsource
+    for idx in list(range(len(topwords))):
+        args["wordsource"+str(idx+minc)] = wordsources[idx]
+
+    #had to use eval hack because of limitations on the type of objects that can be passed into the callback, limited by bokeh backend
+    slidercallback = CustomJS(args=args, code="""
+        var f = cb_obj.value
+        var ndata = eval('wordsource' + f.toString()).data;
+        wordholdsource.data.x = ndata.x
+        wordholdsource.data.y = ndata.y
+        wordholdsource.data.text = ndata.text
+        wordholdsource.trigger('change');
+    """)
+
+    wslider = Slider(start=minc, end=maxc, value=minc+initialclust, step=1, title="# of labels")
+    # slider = Slider(start=0.1, end=4, value=1, step=.1, title="power", callback=callback)
+    wslider.js_on_change('value', slidercallback)
+
+
     #formatting plot
     p.xaxis.axis_label = "Hover to view publication info, Click to open Pubmed link"
     p.xaxis.major_tick_line_color = None  # turn off x-axis major ticks
@@ -583,8 +678,8 @@ def similarityGraph(si, sy, ey, lp):
     reset = Button(label="Clear Highlighting", callback=resetCallback, width=150)
 
 
-
-    lt = layout([[word_input],[reset], [p],[pubview_table]])
+    spdiv = Div(text="&nbsp;",width = 100, height=20)
+    lt = layout([[word_input],[reset,spdiv,wslider], [p],[pubview_table]])
 
     return lt
 
