@@ -32,6 +32,7 @@ app = Flask(__name__)
 app.secret_key = 'VA&Dnadf8%$$#JK9SDA64asf54@!^&'
 
 q2 = Queue()
+tq = Queue()
 loop = asyncio.get_event_loop()
 
 #setting up navigation info
@@ -51,16 +52,6 @@ def index():
     else:
 
         session['vars']  = {}
-
-#         app.vars['cancertype'] = request.form['cancertype']
-
-#         p1 = pdp.pubByDate(app.vars['cancertype'], False)
-#         p2 = pdp.pubByDate(app.vars['cancertype'], True)
-#         p3, p4 = stateGraph(app.vars['cancertype'])
-#         plots = {'p1': p1, 'p2': p2, 'p3': p3, 'p4': p4}
-#         script, div = components(plots)
-
-        #return render_template('pubsearch.html', script=script, div=div, ctype=app.vars['cancertype'])
         return render_template('pubsearch.html')
 
 
@@ -164,19 +155,7 @@ def geoView():
         return render_template('pubview.html', searchstring=session['vars']['searchStr'], script=session['statescript'], div=session['statediv'], curpage=session['curpage'], nav_id=session['nav_id'], nav_name=session['nav_name'],firstload="False")
 
 
-def similarityCalc(ss,sy,ey,lp):
-    rstr = ''
-    for idx in range(20):
-        rstr += rnd.choice(st.ascii_letters + st.digits)
-
-    #rstr = ''.join(rnd.choices(st.ascii_letters + st.digits, k=20))
-    #app.yearplot = yearGraph(app.vars['searchStr'],1975,2017)
-
-    # ss = q1.get()
-    # sy = q1.get()
-    # ey = q1.get()
-
-    print((ss,sy,ey),flush=True)
+def similarityCalc(ss,sy,ey,lp,rstr):
 
     simplot = smp.similarityGraph(ss,sy,ey,lp)
     script, outdiv = components({'simplot': simplot})
@@ -191,6 +170,7 @@ def similarityCalc(ss,sy,ey,lp):
     print("Finished sim calc", flush=True)
 
     global q2
+    q2.put(rstr)
     q2.put(outdiv)
     q2.put(outscript)
 
@@ -212,7 +192,14 @@ def similarityView():
             # q1.put(session['vars']['searchStr'])
             # q1.put('1975')
             # q1.put('2017')
-            t = Thread(target=similarityCalc,args=(session['vars']['searchStr'],'1975','2017',loop))
+
+            rstr = ''
+            for idx in range(20):
+                rstr += rnd.choice(st.ascii_letters + st.digits)
+
+            session['vars']['qid'] = rstr
+
+            t = Thread(target=similarityCalc,args=(session['vars']['searchStr'],'1975','2017',loop,rstr))
             t.start()
             session['vars']['calcsim'] = True
         else:
@@ -245,10 +232,30 @@ def similarityView():
             return render_template('pubview.html', searchstring=session['vars']['searchStr'], script=script, div=waiting, curpage=session['curpage'], nav_id=session['nav_id'], nav_name=session['nav_name'],firstload="False")
         else:
             print("Q2 found")
-            session['simdiv'] = q2.get()
-            session['simscript'] = q2.get()
-            session['vars']['similarity'] = True
-            return render_template('pubview.html', searchstring=session['vars']['searchStr'], script=session['simscript'], div=session['simdiv'], curpage=session['curpage'], nav_id=session['nav_id'], nav_name=session['nav_name'],firstload="False")
+            while not q2.empty():
+                #loop through queue to find data, sorta hacky but I don't want to implement celery with gunicorn
+                qid = q2.get()
+                sd = q2.get()
+                ss = q2.get()
+                if(qid == session['vars']['qid']):
+                    session['simdiv'] = sd
+                    session['simscript'] = ss
+                    break
+                else:
+                    tq.put(qid)
+                    tq.put(sd)
+                    tq.put(ss)
+            #refill queue for other users queries
+            while not tq.empty():
+                q2.put(tq.get())
+
+            #this conditional checks if there is another users info in the queue, but it hasn't been picked up yet. Shouldn't occur too frequently but need to check
+            if('simdiv' not in session):
+                waiting = {"simplot":"<br><br><br><center><b>Similarity Plot is being calculated, page will load when completed.</b><br><img src='/static/loading.gif' /></center>"}
+                return render_template('pubview.html', searchstring=session['vars']['searchStr'], script=script, div=waiting, curpage=session['curpage'], nav_id=session['nav_id'], nav_name=session['nav_name'],firstload="False")
+            else:
+                session['vars']['similarity'] = True
+                return render_template('pubview.html', searchstring=session['vars']['searchStr'], script=session['simscript'], div=session['simdiv'], curpage=session['curpage'], nav_id=session['nav_id'], nav_name=session['nav_name'],firstload="False")
     else:
         ######render
         return render_template('pubview.html', searchstring=session['vars']['searchStr'], script=session['simscript'], div=session['simdiv'], curpage=session['curpage'], nav_id=session['nav_id'], nav_name=session['nav_name'],firstload="False")
