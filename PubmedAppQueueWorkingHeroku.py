@@ -36,6 +36,7 @@ loop = asyncio.get_event_loop()
 
 #setting up navigation info
 
+
 @app.route('/', methods=['GET', 'POST'])
 def index():
     # nquestions=app_lulu.nquestions
@@ -73,17 +74,16 @@ def searchView():
     else:
         session['vars'] = {}
         session['vars']['searchStr'] = request.form['searchterm']
-        return redirect(url_for('countsView'), code=307)
+        return countsView()
 
 
 
-@app.route('/counts', methods=['GET','POST'])
+@app.route('/counts', methods=['POST'])
 def countsView():
     session['curpage'] = "counts"
     if 'countsData' not in session['vars']:
-        if request.method == 'GET':
-            #return to homepage if data isn't here and user got the url
-            return redirect(url_for('index'), code=307)
+
+        #generate random 20 char string as identifier
 
         #app.vars['countsData'] = rstr
         session['vars']['countsData'] = True
@@ -119,15 +119,10 @@ def countsView():
 
 
 
-@app.route('/geo', methods=['GET','POST'])
+@app.route('/geo', methods=['POST'])
 def geoView():
     session['curpage'] = "geo"
     if 'geoData' not in session['vars']:
-
-        if request.method == 'GET':
-            #return to homepage if data isn't here and user got the url
-            return redirect(url_for('index'), code=307)
-
         session['vars']['geoData'] = True
 
         #connect to Pubmed and try to get data, if fail restart
@@ -194,15 +189,10 @@ def similarityCalc(ss,sy,ey,lp):
     q2.put(outdiv)
     q2.put(outscript)
 
-@app.route('/similarity', methods=['GET','POST'])
+@app.route('/similarity', methods=['POST'])
 def similarityView():
     session['curpage'] = "similarity"
     if 'similarity' not in session['vars']:
-
-        if request.method == 'GET':
-            #return to homepage if data isn't here and user got the url
-            return redirect(url_for('index'), code=307)
-
         # session['vars']['similarity'] = True
         if 'calcsim' not in session['vars']:
 
