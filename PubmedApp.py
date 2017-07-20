@@ -232,6 +232,8 @@ def similarityView():
             return render_template('pubview.html', searchstring=session['vars']['searchStr'], script=script, div=waiting, curpage=session['curpage'], nav_id=session['nav_id'], nav_name=session['nav_name'],firstload="False")
         else:
             print("Q2 found")
+
+            #SHOULD DELETE THIS QUEUE CRAP AT SOME POINT AND SWITCH TO SOMETHING LIKE CELERY SO APP CAN SCALE
             while not q2.empty():
                 #loop through queue to find data, sorta hacky but I don't want to implement celery with gunicorn
                 qid = q2.get()
