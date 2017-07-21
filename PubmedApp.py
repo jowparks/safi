@@ -64,7 +64,7 @@ def searchView():
     else:
         session['vars'] = {}
         session['vars']['searchStr'] = request.form['searchterm']
-        return redirect(url_for('countsView'), code=307)
+        return countsView()
 
 
 
