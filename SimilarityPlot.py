@@ -589,6 +589,7 @@ def similarityGraph(si, sy, ey, lp):
         var words = value.split(" ")
         for (i=0; i < data.titles.length; i++) {
             data.alphas[i]= 0.3
+            data.colors[i]=data.colorsperm[i]
         }
         for (i=0; i < data.titles.length; i++) {
             for(j=0; j < words.length; j++){

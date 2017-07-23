@@ -9,18 +9,14 @@
   <!-- If statement below is a hack that I used to bypass the file not being loaded on initial load, gcloud wasn't finding the file
   directly after creation, took a few seconds, so I load script directly into page instead first time, reloading page uses the saved file -->
   {% if script != "" %}
-    {% if firstload == "True" %}
       {{ script | safe }}
-    {% else %}
-      <script type="text/javascript" src="{{url_for('static', filename = 'bokehscripts/'+script)}}"></script>
-    {% endif %}
   {% else %}
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
-  <script>
-    $(document).ready(function(){
-      $('<form method="post" action="/similarity"></form>').appendTo('body').submit();
-    });
-  </script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <script>
+      $(document).ready(function(){
+        $('<form method="post" action="/similarity"></form>').appendTo('body').submit();
+      });
+    </script>
   {% endif %}
 
   <link rel="stylesheet" href="http://cdn.pydata.org/bokeh/release/bokeh-0.12.5.min.css" type="text/css" />
