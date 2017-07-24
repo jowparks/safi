@@ -13,7 +13,7 @@ import json
 from bokeh.sampledata import us_states as usstat
 from bokeh.plotting import figure, show, output_notebook, ColumnDataSource
 from bokeh.models import HoverTool, CustomJS, OpenURL, TapTool, Range1d
-from bokeh.models.widgets import Panel, Tabs
+from bokeh.models.widgets import Panel, Tabs, Div
 from bokeh.layouts import layout
 import pickle
 
@@ -179,7 +179,8 @@ def stateGraph(si,sd,ed):
     t1 = Panel(child=p, title= "Publication Count")
     t2 = Panel(child=p2, title= "Publication Count (Normalized)*")
     ctabs = Tabs(tabs=[t1,t2],width=800)
-    lt = layout([[ctabs]])
+    tit1 = Div(text="<h1>Geography of "+si+" publications</h1>",width=930)
+    lt = layout([[tit1],[ctabs]])
     #show(p)
     #show(p2)
     return lt

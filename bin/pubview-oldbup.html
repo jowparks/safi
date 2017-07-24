@@ -1,0 +1,109 @@
+<!doctype html>
+<title>Pubmed Statistics</title>
+
+<link rel=stylesheet type=text/css href="{{ url_for('static',filename='styleview.css')}}">
+
+<head>
+  <!---->
+
+  <!-- If statement below is a hack that I used to bypass the file not being loaded on initial load, gcloud wasn't finding the file
+  directly after creation, took a few seconds, so I load script directly into page instead first time, reloading page uses the saved file -->
+  {% if script != "" %}
+      {{ script | safe }}
+  {% else %}
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <script>
+      $(document).ready(function(){
+        $('<form method="post" action="/similarity"></form>').appendTo('body').submit();
+      });
+    </script>
+  {% endif %}
+
+  <link rel="stylesheet" href="http://cdn.pydata.org/bokeh/release/bokeh-0.12.5.min.css" type="text/css" />
+  <link rel="stylesheet" href="http://cdn.pydata.org/bokeh/release/bokeh-widgets-0.12.5.min.css" type="text/css" />
+  <script type="text/javascript" src="http://cdn.pydata.org/bokeh/release/bokeh-0.12.5.min.js"></script>
+  <script type="text/javascript" src="http://cdn.pydata.org/bokeh/release/bokeh-widgets-0.12.5.min.js"></script>
+  <script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/lodash.js/0.10.0/lodash.min.js"></script>
+  <script type="text/javascript">
+
+    function Expand(obj) {
+      if (!obj.savesize) obj.savesize = obj.size;
+      obj.size = Math.max(obj.savesize, obj.value.length);
+    }
+
+    function showDiv(s) {
+      var x = document.getElementById(s);
+      if (x.style.display === 'none') {
+        x.style.display = 'block';
+      } else {
+        x.style.display = 'none';
+      }
+    }
+    function hideDiv(s){
+      var x = document.getElementById(s);
+      x.style.display = 'none';
+    }
+    function swapDiv(o1, o2) {
+      var d1 = document.getElementById(o1);
+      var d2 = document.getElementById(o2);
+      if (d1.style.display === 'none') {
+        d1.style.display = 'block';
+        d2.style.display = 'none';
+      } else {
+        d1.style.display = 'none';
+        d2.style.display = 'block';
+      }
+    }
+  </script>
+
+
+</head>
+<div class="page">
+  <h2></h2>
+  <h1>Pubmed Statistics</h1>
+  <div class="metanav">
+
+    <h4>
+        Enter pubmed search term to view statistics associated with the searchs:
+    </h4>
+
+    <form id='search_form' method='post' action='/search'>
+      <input type="text" name='searchterm' onkeyup="Expand(this);" value="{{ searchstring }}">
+      <input type='submit' onclick="showDiv('loadingImg');hideDiv('data_container');" value='Submit' />
+    </form>
+    <ul>
+      {% for item in nav_id %}
+      <form id='nav_form' method='post' action="/{{ item }}">
+        <li class={% if curpage == item %}"active"{% else %}"inactive"{% endif %}><a href="javascript:;" onclick="parentNode.parentNode.submit(); showDiv('loadingImg'); hideDiv('data_container');">{{ nav_name[loop.index0] }}</a></li>
+      </form>
+      {% endfor %}
+    </ul>
+  </div>
+
+  <!-- Loading image once clicked -->
+  <center><img id="loadingImg" src="{{ url_for('static',filename='loading.gif')}}" style="display:none" /></center>
+  <div id='data_container' style="display:block;" >
+  <!-- Year stats page -->
+  {% if curpage == "counts" %}
+    <!-- SET WIDTH OF PAGE DIV HERE WITH JS DEPENDING ON PAGE LOADED -->
+    {{ div.yearplot | safe }}
+  {% endif %}
+  <!-- End year stats page -->
+  <!-- State graph page -->
+  {% if curpage == "geo" %}
+    {{ div.stateplot | safe }}
+  {% endif %}
+  <!-- End state graph page -->
+  <!-- Similarity page -->
+  {% if curpage == "similarity" %}
+    {{ div.simplot | safe }}
+  {% endif %}
+  <!-- End similarity page -->
+  </div>
+
+  <!--<div id='b1' style="display:block" class=box1></div>
+  <div id='b2' style="display:none" class=box2></div>
+  <input type='submit' onclick="swapDiv('b1','b2');" value='Submit' />-->
+</div>
+
+</html>

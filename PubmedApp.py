@@ -41,29 +41,33 @@ loop = asyncio.get_event_loop()
 @app.route('/', methods=['GET', 'POST'])
 def index():
     # nquestions=app_lulu.nquestions
+    curpage=session['curpage'] = 'Home'
     if request.method == 'GET':
 
         #### CHANGE TO ORDERED DICT OR LIST SO THAT INFO IS SENT IN ORDER, NAV ORDER IS CHANGING AFTER PAGE LOAD
         #session['nav_id'] = {'counts':'counts','geo':'geo','similarity':'similarity'}
         #session['nav_name'] = {'counts':'Raw Counts','geo':'Geographic','similarity':'Visualize Article Similarity'}
-        session['nav_id'] = ['counts','geo','similarity']
-        session['nav_name'] = ['Raw Counts','Geographic','Visualize Article Similarity']
+        session['nav_id'] = ['counts','geo','similarity','about']
+        session['nav_name'] = ['Raw Counts','Geographic','Visualize Article Similarity','About']
 
-        return render_template('pubsearch.html')
+        return render_template('pubsearch.html', searchstring="", curpage=session['curpage'], nav_id=session['nav_id'], nav_name=session['nav_name'])
     else:
 
-        session['vars']  = {}
-        return render_template('pubsearch.html')
+        #session['vars']  = {}
+        return render_template('pubsearch.html', searchstring="", curpage=session['curpage'], nav_id=session['nav_id'], nav_name=session['nav_name'])
 
 
 
 @app.route('/search', methods=['GET', 'POST'])
 def searchView():
     if request.method == 'GET':
+
+        curpage=session['curpage'] = 'Home'
         session['vars'] = {}
         return render_template('pubsearch.html')
     else:
         session['vars'] = {}
+        print(request.form)
         session['vars']['searchStr'] = request.form['searchterm']
 
         #hash the filename for uniqueness
@@ -76,6 +80,13 @@ def searchView():
 
 @app.route('/counts', methods=['GET','POST'])
 def countsView():
+
+
+    #if button is clicked before search is performed
+    if 'vars' not in session:
+        #return to homepage if data isn't here and user got the url
+        return redirect(url_for('index'), code=307)
+
     session['curpage'] = "counts"
 
 
@@ -123,9 +134,24 @@ def countsView():
 
 
 
+@app.route('/about', methods=['GET','POST'])
+def aboutView():
+
+
+    session['curpage'] = "about"
+    ######render
+    return render_template('pubview.html', searchstring="", script="none", div="", curpage=session['curpage'], nav_id=session['nav_id'], nav_name=session['nav_name'])
+
+
 
 @app.route('/geo', methods=['GET','POST'])
 def geoView():
+
+    #if button is clicked before search is performed
+    if 'vars' not in session:
+        #return to homepage if data isn't here and user got the url
+        return redirect(url_for('index'), code=307)
+
     session['curpage'] = "geo"
 
 
@@ -203,6 +229,11 @@ def similarityCalc(ss,sy,ey,lp,rstr):
 def similarityView():
 
 
+    #if button is clicked before search is performed
+    if 'vars' not in session:
+        #return to homepage if data isn't here and user got the url
+        return redirect(url_for('index'), code=307)
+
     session['curpage'] = "similarity"
 
     d_file = Path('static/bokehscripts/'+session['vars']['hid']+'simdiv.p')
@@ -251,7 +282,7 @@ def similarityView():
         ######render, render with script instead of simscript first time, fixes issue with gcloud not loading file when it is generated immediately
             #waiting for calculations to finish, load dummy info into the page
         waiting = {"simplot":"<br><br><br><center><b>Similarity Plot is being calculated, page will load when completed.</b><br><img src='/static/loading.gif' /></center>"}
-        return render_template('pubview.html', searchstring=session['vars']['searchStr'], script="", div=waiting, curpage=session['curpage'], nav_id=session['nav_id'], nav_name=session['nav_name'])
+        return render_template('pubview.html', searchstring=session['vars']['searchStr'], script="reload", div=waiting, curpage=session['curpage'], nav_id=session['nav_id'], nav_name=session['nav_name'])
         # else:
         #     print("script found")
 

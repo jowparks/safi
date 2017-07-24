@@ -181,6 +181,7 @@ def yearGraph(si,sy,ey):
     cite_table = DataTable(source=cite_source, columns=cite_columns, width=280, height=210)
     journal_table = DataTable(source=journal_source, columns=journal_columns, width=300, height=210)
 
+    tit0 = Div(text="<h1>General statistics for "+si+"</h1>",width=930)
     tit1 = Div(text="<h1>Common Authors and Journals</h1>\n<h5>(Select author(s) or journal(s) to display related publications)</h5>",width=930)
     tit2 = Div(text="<h1>Related Publications</h1>\n<h5>(click publication to visit pubmed entry)</h5>", width=930)
 
@@ -309,7 +310,7 @@ def yearGraph(si,sy,ey):
     ###### write callbacks for other two tables as well
 
 
-    yearslayout = layout([[p],[tit1],[paper_table,spacer,cite_table,spacer2,journal_table],[tit2],[pubview_table]])
+    yearslayout = layout([[tit0],[p],[tit1],[paper_table,spacer,cite_table,spacer2,journal_table],[tit2],[pubview_table]])
 
 
 

@@ -322,7 +322,7 @@ def calcTSNE(X):
         print("SVD calc")
         #X = jarr
         pre = time.time()
-        svd = TruncatedSVD(n_components=50, n_iter=7, random_state=42)
+        svd = TruncatedSVD(n_components=20, n_iter=7, random_state=42)
         Xr = svd.fit_transform(X)
         print("SVD runtime:"+str(time.time()-pre))
 
@@ -681,7 +681,8 @@ def similarityGraph(si, sy, ey, lp):
 
 
     spdiv = Div(text="&nbsp;",width = 100, height=20)
-    lt = layout([[word_input],[reset,spdiv,wslider], [p],[pubview_table]])
+    tit1 = Div(text="<h1>"+si+" similarity plot</h1>",width=930)
+    lt = layout([[tit1], [word_input],[reset,spdiv,wslider],[p],[pubview_table]])
 
     return lt
 
