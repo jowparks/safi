@@ -152,7 +152,20 @@
         <!-- End similarity page -->
         <!-- About page -->
         {% if curpage == "about" %}
-          Example
+        <h1>Contact Information</h1>
+        <br>
+        <table align="center">
+            <tr>
+              <td><img src="{{ url_for('static',filename='headshot.jpg')}}" width=192 height=288/></td>
+              <td align="center"><font size="5">Joseph Parks<br>Data Scientist | Biophysicist<br>jowparks@gmail.com<br>(541)601-6139</font></td>
+            </tr>
+            <tr>
+            </tr>
+        </table>
+        <br>
+        <h1>Application workflow</h1>
+        <br>
+        <center><img src="{{ url_for('static',filename='workflow.png')}}" width=663 height=234 /></center>
         {% endif %}
         <!-- End about page -->
 
