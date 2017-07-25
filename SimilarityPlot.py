@@ -352,7 +352,7 @@ def pseudocolor(val, minval, maxval):
     h = abs(h-maxc)+minc
     # convert hsv color (h,1,1) to its rgb equivalent
     # note: the hsv_to_rgb() function expects h to be in the range 0..1 not 0..360
-    r, g, b = colorsys.hsv_to_rgb(h/360, 1., 1.)
+    r, g, b = colorsys.hsv_to_rgb(h/360, 0.4, 1.)
     return "rgb("+str(int(round(r*255)))+", "+str(int(round(g*255)))+", "+str(int(round(b*255)))+")"
 
 
@@ -621,16 +621,16 @@ def similarityGraph(si, sy, ey, lp):
     TOOLS = 'pan,lasso_select,wheel_zoom,tap,reset'
     p = figure(plot_width=900, plot_height=600, title="'"+si+"' tSNE similarity", tools=[TOOLS,hover], active_scroll='wheel_zoom', active_drag="lasso_select")
 
-    p.circle('x', 'y',fill_color='colors', fill_alpha='alphas', size='ptsizes', source=source)
+    p.circle('x', 'y',fill_color='colors', fill_alpha='alphas', size='ptsizes', line_color="#000000",line_alpha=0.2,source=source)
 
     #word labeles for plots
     wordsources = []
     for idx in list(range(len(topwords))):
         wordsources.append(ColumnDataSource(dict(x=kcenters[idx][:,0], y=kcenters[idx][:,1], text=topwords[idx])))
 
-    wordglyph = Text(x="x", y="y", text="text", text_color="#000000",text_font_style="bold")
-    #3 is used for initial slider set below
-    initialclust = 3
+    wordglyph = Text(x="x", y="y", text="text", text_color="#000000",text_font_style="bold", text_font_size="14pt")
+    #5 is used for initial slider set below
+    initialclust = 5
     wordholdsource = ColumnDataSource(dict(x=kcenters[initialclust][:,0], y=kcenters[initialclust][:,1], text=topwords[initialclust]))
     p.add_glyph(wordholdsource, wordglyph)
 
