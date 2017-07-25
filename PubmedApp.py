@@ -74,7 +74,8 @@ def searchView():
         rstr = hashlib.sha256(session['vars']['searchStr'].lower().encode('utf8')).hexdigest()
         session['vars']['hid'] = rstr
 
-        return countsView()
+        #return countsView()
+        return similarityView()
 
 
 
