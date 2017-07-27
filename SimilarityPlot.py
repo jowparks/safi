@@ -413,6 +413,9 @@ def similarityGraph(si, sy, ey, lp):
 
     print("Searching for PMIDs")
     rids = PMIDsFromSearch(ss, sy, ey)
+    #stop search if too broad, prevent from breaking
+    if(len(rids)>15500):
+        return len(rids)
 
     print("Getting Cited PMIDs")
     ids, cids = getCitedFromPMIDs(rids, lp)

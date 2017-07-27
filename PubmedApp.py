@@ -47,8 +47,8 @@ def index():
         #### CHANGE TO ORDERED DICT OR LIST SO THAT INFO IS SENT IN ORDER, NAV ORDER IS CHANGING AFTER PAGE LOAD
         #session['nav_id'] = {'counts':'counts','geo':'geo','similarity':'similarity'}
         #session['nav_name'] = {'counts':'Raw Counts','geo':'Geographic','similarity':'Visualize Article Similarity'}
-        session['nav_id'] = ['counts','geo','similarity','about']
-        session['nav_name'] = ['Raw Counts','Geographic','Visualize Article Similarity','About']
+        session['nav_id'] = ['similarity','counts','geo','about']
+        session['nav_name'] = ['Visualize Article Similarity','Statistics','Geography','About']
 
         return render_template('pubsearch.html', searchstring="", curpage=session['curpage'], nav_id=session['nav_id'], nav_name=session['nav_name'])
     else:
@@ -208,7 +208,12 @@ def geoView():
 def similarityCalc(ss,sy,ey,lp,rstr):
 
     simplot = smp.similarityGraph(ss,sy,ey,lp)
-    script, div = components({'simplot': simplot})
+
+    #int means too many results returned
+    if(isinstance(simplot, int )):
+        script, div = "",{"simplot":"<center><img src='/static/brokenrobo.png' /><br><b>Sorry we got memory issues, your search returned "+str(simplot)+" articles and the limit is 15500 articles.<br>(e.g. instead of searching for 'cancer', search for 'lung adenocarcinoma')<br><br></center>"}
+    else:
+        script, div = components({'simplot': simplot})
 
     ###########MODIFY CODE IN OTHER AREAS TO DO SAME THING, ALSO ADD RANDOM KEY FOR FILE STORAGE INSTEAD OF 'outputtemp.js'
     outscript = rstr+"simscript.js"
