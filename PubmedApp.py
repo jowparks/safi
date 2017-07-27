@@ -211,7 +211,7 @@ def similarityCalc(ss,sy,ey,lp,rstr):
 
     #int means too many results returned
     if(isinstance(simplot, int )):
-        script, div = "",{"simplot":"<center><img src='/static/brokenrobo.png' /><br><b>Sorry we got memory issues, your search returned "+str(simplot)+" articles and the limit is 15500 articles.<br>(e.g. instead of searching for 'cancer', search for 'lung adenocarcinoma')<br><br></center>"}
+        script, div = "",{"simplot":"<center><img src='/static/brokenrobo.png' /><br><b>Sorry we have memory issues. Your search returned "+str(simplot)+" articles and the limit is 15500 articles.<br>(e.g. instead of searching for 'cancer', search for 'lung adenocarcinoma')<br><br></center>"}
     else:
         script, div = components({'simplot': simplot})
 
