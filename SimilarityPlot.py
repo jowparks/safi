@@ -403,10 +403,7 @@ def tfidfClusters(clusts,tits):
     # print(len(feature_array))
     return topn
 
-# print("xmax "+str(np.amax(Y[:,0])))
-# print("xmin "+str(np.amin(Y[:,0])))
-# print("ymax "+str(np.amax(Y[:,1])))
-# print("ymin "+str(np.amin(Y[:,1])))
+
 def similarityGraph(si, sy, ey, lp):
     pres = time.time()
     ss = quote(si)

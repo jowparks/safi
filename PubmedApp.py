@@ -207,8 +207,14 @@ def geoView():
 
 def similarityCalc(ss,sy,ey,lp,rstr):
 
-    simplot = smp.similarityGraph(ss,sy,ey,lp)
 
+    while True:
+        try:
+            simplot = smp.similarityGraph(ss,sy,ey,lp)
+            break
+        except:
+            print("Error getting similarity data")
+            
     #int means too many results returned
     if(isinstance(simplot, int )):
         script, div = "",{"simplot":"<center><img src='/static/brokenrobo.png' /><br><b>Sorry we have memory issues. Your search returned "+str(simplot)+" articles and the limit is 15500 articles.<br>(e.g. instead of searching for 'cancer', search for 'lung adenocarcinoma')<br><br></center>"}
