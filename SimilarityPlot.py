@@ -163,34 +163,6 @@ def getCitedFromPMIDs(rids, lp):
                 ids.append(int(ttid.text))
     return ids, cids
 
-# def getCitedFromPMIDXML(r):
-#     ids = []
-#     cids = []
-
-#     cited_post = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/elink.fcgi"
-#     post_vars = {"dbfrom":"pubmed", "linkname":"pubmed_pubmed_refs","id":[]}
-
-#     #loop over all articles and grab set cited papers (see cited_rosetta for paper structure)
-#     for tid in r[0][1].iter('Id'):
-#         post_vars['id'].append(tid.text)
-
-#     pre = time.time()
-#     cited_fetch = requests.post(cited_post, data=post_vars)
-#     print("References Retrieved:"+str(time.time()-pre))
-#     croot = ET.fromstring(cited_fetch.text)
-
-#     for linkset in croot.iter('LinkSet'):
-#         tlinks = []
-#         ttid = linkset.find('IdList')[0]
-#         if(len(list(linkset))>2):
-#             for link in linkset.find('LinkSetDb').iter('Link'):
-#                 tlid = link[0]
-#                 tlinks.append(tlid.text)
-#             cids.append(tlinks)
-#             ids.append(int(ttid.text))
-#     return ids, cids
-
-
 
 ########Grabs all ids summary to get the title, authors, pubdate for each PMID
 def getPMIDInfo(ids):
@@ -234,58 +206,6 @@ def getPMIDInfo(ids):
 
 
     return titles, dates, authors, journals, pmccites
-
-########CHANGE CODE BELOW need to grab all ids summary to get the title, authors, pubdate for each
-# def getPMIDInfo(ids):
-#     #use full journal name
-#     titles = []
-#     dates = []
-#     authors = []
-#     journals = []
-
-#     #https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&version=2.0&id=27656642,24923681
-#     info_base = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&version=2.0&id="
-#     info_post = info_base
-
-#     #loop over all PMIDs
-#     for tid in ids:
-#         if((len(info_post)+len(str(tid))+4)>2083):
-
-#             #print("fetching")
-#             info_post = info_post[:-1]
-#             info_fetch = requests.post(info_post)
-#             info_post = info_base+str(tid)+","
-#             croot = ET.fromstring(info_fetch.text)
-
-#             #get data from croot
-#             for doc in croot[0].iter('DocumentSummary'):
-#                 titles.append(doc.find('Title').text)
-#                 dates.append(doc.find('PubDate').text)
-#                 journals.append(doc.find('FullJournalName').text)
-#                 aus = ""
-#                 for auth in doc.find('Authors').iter('Author'):
-#                     aus += auth.find('Name').text+", "
-#                 authors.append(aus[:-2])
-
-#         else:
-#             info_post += str(tid)+","
-
-#     #for grabbing last set of Links
-
-#     info_post = info_post[:-1]
-#     info_fetch = requests.post(info_post)
-#     croot = ET.fromstring(info_fetch.text)
-
-#     for doc in croot[0].iter('DocumentSummary'):
-#         titles.append(doc.find('Title').text)
-#         dates.append(doc.find('PubDate').text)
-#         journals.append(doc.find('FullJournalName').text)
-#         aus = ""
-#         for auth in doc.find('Authors').iter('Author'):
-#             aus += auth.find('Name').text+", "
-#         authors.append(aus[:-2])
-#     return titles, dates, authors, journals
-
 
 def returnCosine(cids):
     column = np.hstack(cids).astype(np.float)
