@@ -207,15 +207,15 @@ def geoView():
 
 def similarityCalc(ss,sy,ey,lp,rstr):
 
-    try_count = 0
-    while try_count<6:
-        try_count += 1
-        try:
-            simplot = smp.similarityGraph(ss,sy,ey,lp)
-            break
-        except:
-            print("Error getting similarity data")
-            simplot = 0
+    # try_count = 0
+    # while try_count<6:
+    #     try_count += 1
+        # try:
+    simplot = smp.similarityGraph(ss,sy,ey,lp)
+            # break
+        # except:
+        #     print("Error getting similarity data")
+            # simplot = 0
 
     #int means too many results returned
     if(isinstance(simplot, int )):
