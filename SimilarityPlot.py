@@ -5,10 +5,12 @@ from aiohttp import TCPConnector
 
 import time
 import asyncio
+import pandas as pd
 import numpy as np
 import scipy.sparse as sp
 import colorsys
 import re
+import sqlite3
 
 
 import xml.etree.ElementTree as ET
@@ -163,7 +165,14 @@ def getCitedFromPMIDs(rids, lp):
                 ids.append(int(ttid.text))
     return ids, cids
 
+#query sql database for matching citations
+def getCitedFromSQL(pids,db):
+    conn = sqlite3.connect(db)
 
+    sql_query = 'SELECT * FROM citations WHERE pmid IN (' + ','.join(map(str,pids)) + ')'
+    sqlpd = pd.read_sql_query(sql_query,conn)
+
+    return sqlpd
 ########Grabs all ids summary to get the title, authors, pubdate for each PMID
 def getPMIDInfo(ids):
     #use full journal name
@@ -324,7 +333,7 @@ def tfidfClusters(clusts,tits):
     return topn
 
 
-def similarityGraph(si, sy, ey, lp):
+def similarityGraph(si, sy, ey, lp, db):
     pres = time.time()
     ss = quote(si)
 
@@ -334,11 +343,35 @@ def similarityGraph(si, sy, ey, lp):
     if(len(rids)>15500):
         return len(rids)
 
-    print("Getting Cited PMIDs")
-    ids, cids = getCitedFromPMIDs(rids, lp)
+    #retrieve primary info from built database
+    print("Querying db for citations")
+    pre = time.time()
+    cdf = getCitedFromSQL(rids, db)
+    print(str(len(cdf.index))+"/"+str(len(rids))+" citations found")
+
+    #clean up, delete ids without citation data
+    cdfc = cdf.dropna()
+    print(str(len(cdfc.index))+"/"+str(len(cdf.index))+" have citation data")
+    print("Retrieved in "+str(time.time()-pre)+" seconds")
+
+    # SHOULD POTENTIALLY ADD THIS BACK, OTHERWISE WILL MISS SOME PUBLICATIONS, difference between what was in database and what was returned by pubmed
+    # nrids = list(set(cdf['pmid']).symmetric_difference(set(rids)))
+    # print("Retrieving remaining "+str(len(nrids))+" publications")
+    #
+    # print("Getting Cited PMIDs")
+    # ###MODIFY nrids to be the citation data from database!!!!!!!!!!!
+    # ids, cids = getCitedFromPMIDs(nrids, lp)
+    # print("New ids :"+str(len(ids)))
+
+    #build citation arrays for cosine calcutation
+    ids = list(cdfc['pmid'])
+    cids = []
+    for index,row in cdfc.iterrows():
+        cids.append(row['citationids'].split(','))
 
     print("Getting Info of PMIDs")
     titles, dates, authors, journals, pmccites = getPMIDInfo(ids)
+
 
     print("Performing sparse cosine similarity")
     pre = time.time()
@@ -348,7 +381,6 @@ def similarityGraph(si, sy, ey, lp):
     print("Performing TSNE")
     pre = time.time()
     Y = calcTSNE(carr)
-    print("TSNE time:"+str(time.time()-pre))
 
 
 
@@ -601,7 +633,7 @@ def similarityGraph(si, sy, ey, lp):
 
 
     spdiv = Div(text="&nbsp;",width = 100, height=20)
-    tit1 = Div(text="<h1>"+si+" similarity plot</h1>",width=930)
+    tit1 = Div(text="<h1>"+si+" similarity plot</h1><br><h5>(displaying "+str(len(cdfc.index))+"/"+str(len(rids))+" articles with citation data)</h5>",width=930)
     lt = layout([[tit1], [word_input],[reset,spdiv,wslider],[p],[pubview_table]])
 
     return lt

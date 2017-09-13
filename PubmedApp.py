@@ -33,6 +33,7 @@ import pickle
 
 app = Flask(__name__)
 app.secret_key = 'VA&Dnadf8%$$#JK9SDA64asf54@!^&'
+app.sqldb = '/Users/jowparks/Data/pubmed.db'
 
 loop = asyncio.get_event_loop()
 
@@ -207,15 +208,17 @@ def geoView():
 
 def similarityCalc(ss,sy,ey,lp,rstr):
 
-    try_count = 0
-    while try_count<6:
-        try_count += 1
-        try:
-            simplot = smp.similarityGraph(ss,sy,ey,lp)
-            break
-        except:
-            print("Error getting similarity data")
-            simplot = 0
+    simplot = smp.similarityGraph(ss,sy,ey,lp,app.sqldb)
+    # try_count = 0
+    # while try_count<6:
+    #     try_count += 1
+    #     try:
+    #         simplot = smp.similarityGraph(ss,sy,ey,lp,app.sqldb)
+    #         break
+    #     except Exception as e:
+    #         print("Error getting similarity data")
+    #         print(e)
+    #         simplot = 0
 
     #int means too many results returned
     if(isinstance(simplot, int )):
