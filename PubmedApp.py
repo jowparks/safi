@@ -1,56 +1,49 @@
-###Main page: PubmedApp
-#mainspot
+###Controller for python/flask web app, main analysis functions are inside of referenced files
 
+from flask import Flask, render_template, request, redirect, session, url_for
+from bokeh.embed import components
 from threading import Thread
-from queue import Queue
+from pathlib import Path
 
 import time
 import asyncio
-import string as st
-import random as rnd
-print(rnd.__file__)
-from flask import Flask, render_template, request, redirect, session, url_for
-from bokeh.embed import components
+import hashlib
+import pickle
+import logging
+import os
+
+
+
 import PubDatePlotting as pdp
 import StateGraph as sg
 import SimilarityPlot as smp
-import hashlib
-from pathlib import Path
-import pickle
-#####started kv insertion##########
-#import redis
-#from flask import Flask
-#from flask_kvsession import KVSessionExtension
-#from simplekv.memory.redisstore import RedisStore
+import AbstractSearch as absr
 
-
-#store = RedisStore(redis.StrictRedis())
-
-#app = Flask(__name__)
-#KVSessionExtension(store, app)
-####end kv insertion, uncomment flask(__name__) below if needed########
-# output_notebook()
 
 app = Flask(__name__)
 app.secret_key = 'VA&Dnadf8%$$#JK9SDA64asf54@!^&'
-app.sqldb = '/Users/jowparks/Data/pubmed.db'
 
-loop = asyncio.get_event_loop()
+if(os.path.isfile('/Users/jowparks/Data/pubmed.db')):
+    app.sqldb = '/Users/jowparks/Data/pubmed.db'
+else:
+    app.sqldb = 'static/pubmed.db'
 
-#setting up navigation info
+#loop = asyncio.get_event_loop()
+
+log = logging.getLogger('werkzeug')
+log.setLevel(logging.ERROR)
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
     # nquestions=app_lulu.nquestions
-    curpage=session['curpage'] = 'Home'
+    curpage=session['curpage'] = '/'
     if request.method == 'GET':
 
         #### CHANGE TO ORDERED DICT OR LIST SO THAT INFO IS SENT IN ORDER, NAV ORDER IS CHANGING AFTER PAGE LOAD
         #session['nav_id'] = {'counts':'counts','geo':'geo','similarity':'similarity'}
         #session['nav_name'] = {'counts':'Raw Counts','geo':'Geographic','similarity':'Visualize Article Similarity'}
-        session['nav_id'] = ['similarity','counts','geo','about']
-        session['nav_name'] = ['Visualize Article Similarity','Statistics','Geography','About']
-
+        session['nav_id'] = ['similarity','similarityab','counts','geo','about']#,'abstractsearch']
+        session['nav_name'] = ['Visualize Citation Similarity','Visualize Abstract Similarity','Statistics','Geography','About']#,'Abstract Search']
         return render_template('pubsearch.html', searchstring="", curpage=session['curpage'], nav_id=session['nav_id'], nav_name=session['nav_name'])
     else:
 
@@ -63,9 +56,9 @@ def index():
 def searchView():
     if request.method == 'GET':
 
-        curpage=session['curpage'] = 'Home'
+        curpage=session['curpage'] = '/'
         session['vars'] = {}
-        return render_template('pubsearch.html')
+        return render_template('pubsearch.html',curpage=session['curpage'])
     else:
         session['vars'] = {}
         print(request.form)
@@ -94,6 +87,13 @@ def countsView():
 
     d_file = Path('static/bokehscripts/'+session['vars']['hid']+'yeardiv.p')
     s_file = Path('static/bokehscripts/'+session['vars']['hid']+'yearscript.js')
+
+    #delete file if user asks to delete
+    if 'delete' in request.form:
+        if s_file.is_file():
+            os.remove(s_file)
+        if d_file.is_file():
+            os.remove(d_file)
 
     if not s_file.is_file() or not d_file.is_file():
         if request.method == 'GET':
@@ -142,7 +142,8 @@ def aboutView():
 
     session['curpage'] = "about"
     ######render
-    return render_template('pubview.html', searchstring="", script="none", div="", curpage=session['curpage'], nav_id=session['nav_id'], nav_name=session['nav_name'])
+    tdiv = open('static/aboutdiv.html','r').read()
+    return render_template('pubview.html', searchstring="", div=tdiv, curpage=session['curpage'], nav_id=session['nav_id'], nav_name=session['nav_name'])
 
 
 
@@ -160,6 +161,13 @@ def geoView():
 
     d_file = Path('static/bokehscripts/'+session['vars']['hid']+'geodiv.p')
     s_file = Path('static/bokehscripts/'+session['vars']['hid']+'geoscript.js')
+
+    #delete file if user asks to delete
+    if 'delete' in request.form:
+        if s_file.is_file():
+            os.remove(s_file)
+        if d_file.is_file():
+            os.remove(d_file)
 
     if not s_file.is_file() or not d_file.is_file():
 
@@ -206,9 +214,9 @@ def geoView():
         return render_template('pubview.html', searchstring=session['vars']['searchStr'], script=tscript, div=tdiv, curpage=session['curpage'], nav_id=session['nav_id'], nav_name=session['nav_name'])
 
 
-def similarityCalc(ss,sy,ey,lp,rstr):
+def similarityCalc(ss,sy,ey,rstr,abstractsim):
 
-    simplot = smp.similarityGraph(ss,sy,ey,lp,app.sqldb)
+    simplot = smp.similarityGraph(ss,sy,ey,app.sqldb,abstractsim)
     # try_count = 0
     # while try_count<6:
     #     try_count += 1
@@ -220,25 +228,25 @@ def similarityCalc(ss,sy,ey,lp,rstr):
     #         print(e)
     #         simplot = 0
 
-    #int means too many results returned
-    if(isinstance(simplot, int )):
-        script, div = "",{"simplot":"<center><img src='/static/brokenrobo.png' /><br><b>Sorry we have memory issues. Your search returned "+str(simplot)+" articles and the limit is 15500 articles.<br>(e.g. instead of searching for 'cancer', search for 'lung adenocarcinoma')<br><br></center>"}
-    else:
-        script, div = components({'simplot': simplot})
+    script, div = components({'simplot': simplot})
 
-    ###########MODIFY CODE IN OTHER AREAS TO DO SAME THING, ALSO ADD RANDOM KEY FOR FILE STORAGE INSTEAD OF 'outputtemp.js'
-    outscript = rstr+"simscript.js"
+    if(abstractsim):
+        outscript = rstr+"simabscript.js"
+        outdiv = rstr+"simabdiv.p"
+    else:
+        outscript = rstr+"simscript.js"
+        outdiv = rstr+"simdiv.p"
 
     with open("static/bokehscripts/"+outscript,"w") as file:
-            #remove JS tags
-            file.write(script)
-            file.close()
+        #remove JS tags
+        file.write(script)
+        file.close()
 
-    outdiv = rstr+"simdiv.p"
+
     with open("static/bokehscripts/"+outdiv,"wb") as file:
-            #remove JS tags
-            pickle.dump(div, file)
-            file.close()
+        #remove JS tags
+        pickle.dump(div, file)
+        file.close()
 
     print("Finished sim calc", flush=True)
 
@@ -256,6 +264,16 @@ def similarityView():
     d_file = Path('static/bokehscripts/'+session['vars']['hid']+'simdiv.p')
     s_file = Path('static/bokehscripts/'+session['vars']['hid']+'simscript.js')
 
+    #delete file if user asks to delete
+    if 'delete' in request.form:
+
+        if('calcsim' in session['vars']):
+            del session['vars']['calcsim']
+        if s_file.is_file():
+            os.remove(s_file)
+        if d_file.is_file():
+            os.remove(d_file)
+
     if not s_file.is_file() or not d_file.is_file():
     #if 'similarity' not in session['vars']:
 
@@ -266,68 +284,24 @@ def similarityView():
         # session['vars']['similarity'] = True
         if 'calcsim' not in session['vars']:
 
-            global loop
+            #global loop
 
             print("calc sim")
             # q1.put(session['vars']['searchStr'])
             # q1.put('1975')
             # q1.put('2017')
 
-            t = Thread(target=similarityCalc,args=(session['vars']['searchStr'],'1975','2017',loop,session['vars']['hid']))
+            t = Thread(target=similarityCalc,args=(session['vars']['searchStr'],'1800','3000',session['vars']['hid'],False))
             t.start()
             session['vars']['calcsim'] = True
         else:
-            print("waiting to reload")
+            #print("waiting to reload")
             time.sleep(5)
-
-        # rstr = ''
-        # for idx in range(20):
-        #     rstr += rnd.choice(st.ascii_letters + st.digits)
-        #
-        # #rstr = ''.join(rnd.choices(st.ascii_letters + st.digits, k=20))
-        # #app.yearplot = yearGraph(app.vars['searchStr'],1975,2017)
-        # simplot = smp.similarityGraph(session['vars']['searchStr'],'1975', '2017')
-        # script, session['simdiv'] = components({'column_div': simplot})
-        #
-        # ###########MODIFY CODE IN OTHER AREAS TO DO SAME THING, ALSO ADD RANDOM KEY FOR FILE STORAGE INSTEAD OF 'outputtemp.js'
-        # session['simscript'] = rstr+".js"
-        # with open("static/bokehscripts/"+session['simscript'],"w") as file:
-        #         #remove JS tags
-        #         file.write(script[32:-9])
-        #         file.close()
 
         ######render, render with script instead of simscript first time, fixes issue with gcloud not loading file when it is generated immediately
             #waiting for calculations to finish, load dummy info into the page
         waiting = {"simplot":"<br><br><br><center><b>Similarity Plot is being calculated, page will load when completed.</b><br><img src='/static/loading.gif' /></center>"}
         return render_template('pubview.html', searchstring=session['vars']['searchStr'], script="reload", div=waiting, curpage=session['curpage'], nav_id=session['nav_id'], nav_name=session['nav_name'])
-        # else:
-        #     print("script found")
-
-            #SHOULD DELETE THIS QUEUE CRAP AT SOME POINT AND SWITCH TO SOMETHING LIKE CELERY SO APP CAN SCALE
-            # while not q2.empty():
-            #     #loop through queue to find data, sorta hacky but I don't want to implement celery with gunicorn
-            #     qid = q2.get()
-            #     sd = q2.get()
-            #     ss = q2.get()
-            #     if(qid == session['vars']['qid']):
-            #         session['simdiv'] = sd
-            #         session['simscript'] = ss
-            #         break
-            #     else:
-            #         tq.put(qid)
-            #         tq.put(sd)
-            #         tq.put(ss)
-            # #refill queue for other users queries
-            # while not tq.empty():
-            #     q2.put(tq.get())
-
-            #this conditional checks if there is another users info in the queue, but it hasn't been picked up yet. Shouldn't occur too frequently but need to check
-            # if('simdiv' not in session):
-            #     waiting = {"simplot":"<br><br><br><center><b>Similarity Plot is being calculated, page will load when completed.</b><br><img src='/static/loading.gif' /></center>"}
-            #     return render_template('pubview.html', searchstring=session['vars']['searchStr'], script=script, div=waiting, curpage=session['curpage'], nav_id=session['nav_id'], nav_name=session['nav_name'],firstload="False")
-            # else:
-            # session['vars']['similarity'] = True
-            # return render_template('pubview.html', searchstring=session['vars']['searchStr'], script=session['simscript'], div=session['simdiv'], curpage=session['curpage'], nav_id=session['nav_id'], nav_name=session['nav_name'],firstload="False")
     else:
         #load in div and script info for the specified search
         f = open('static/bokehscripts/'+session['vars']['hid']+'simdiv.p', "rb")
@@ -337,6 +311,140 @@ def similarityView():
         ######render
         return render_template('pubview.html', searchstring=session['vars']['searchStr'], script=script, div=session['simdiv'], curpage=session['curpage'], nav_id=session['nav_id'], nav_name=session['nav_name'])
 
+@app.route('/similarityab', methods=['GET','POST'])
+def similarityAbstractView():
+
+
+    #if button is clicked before search is performed
+    if 'vars' not in session:
+        #return to homepage if data isn't here and user got the url
+        return redirect(url_for('index'), code=307)
+
+    session['curpage'] = "similarityab"
+
+    d_file = Path('static/bokehscripts/'+session['vars']['hid']+'simabdiv.p')
+    s_file = Path('static/bokehscripts/'+session['vars']['hid']+'simabscript.js')
+
+    #delete file if user asks to delete
+    if 'delete' in request.form:
+
+        if('calcabsim' in session['vars']):
+            del session['vars']['calcabsim']
+        if s_file.is_file():
+            os.remove(s_file)
+        if d_file.is_file():
+            os.remove(d_file)
+
+    if not s_file.is_file() or not d_file.is_file():
+    #if 'similarity' not in session['vars']:
+
+        if request.method == 'GET':
+            #return to homepage if data isn't here and user got the url
+            return redirect(url_for('index'), code=307)
+
+        # session['vars']['similarity'] = True
+        if 'calcabsim' not in session['vars']:
+
+            #global loop
+
+            print("calc sim")
+
+            t = Thread(target=similarityCalc,args=(session['vars']['searchStr'],'1800','3000',session['vars']['hid'],True))
+            t.start()
+            session['vars']['calcabsim'] = True
+        else:
+            #print("waiting to reload")
+            time.sleep(5)
+
+
+        waiting = {"simplot":"<br><br><br><center><b>Similarity Plot is being calculated, page will load when completed.</b><br><img src='/static/loading.gif' /></center>"}
+        return render_template('pubview.html', searchstring=session['vars']['searchStr'], script="reload", div=waiting, curpage=session['curpage'], nav_id=session['nav_id'], nav_name=session['nav_name'])
+    else:
+        #load in div and script info for the specified search
+        f = open('static/bokehscripts/'+session['vars']['hid']+'simabdiv.p', "rb")
+        session['simabdiv'] = pickle.load(f)
+        script = open('static/bokehscripts/'+session['vars']['hid']+'simabscript.js','r').read()
+
+        ######render
+        return render_template('pubview.html', searchstring=session['vars']['searchStr'], script=script, div=session['simabdiv'], curpage=session['curpage'], nav_id=session['nav_id'], nav_name=session['nav_name'])
+
+
+@app.route('/abstractsearch', methods=['GET','POST'])
+def abstractSearchView():
+
+    session['curpage'] = "abstractsearch"
+
+    if 'abstract' not in request.form:
+        #return search page for user, haven't completed search
+        print("Sending to search page")
+        return redirect(url_for('enterAbstract'), code=307)
+
+    else:
+
+        #checks if search term is present to pass along, might not be there for abstract search
+        if 'vars' in session:
+            if 'searchStr' in session['vars']:
+                ss = session['vars']['searchStr']
+            else:
+                ss = ''
+        else:
+            ss = ''
+
+        if 'abstract_thread' not in session:
+
+            session['abstract_in'] = request.form['abstract']
+            rstr = hashlib.sha256(session['abstract_in'].lower().encode('utf8')).hexdigest()
+            session['abfile'] = 'static/abstractdivs/'+rstr+'abstractdiv.html'
+
+            print("Finding similar abstracts")
+            #change variable here
+            t = Thread(target=absr.abstractSearch,args=(app.sqldb,session['abfile'],session['abstract_in']))
+            t.start()
+            session['abstract_thread'] = True
+        else:
+            #print("waiting to reload")
+            time.sleep(5)
+
+        # f = open('static/bokehscripts/'+session['vars']['hid']+'yeardiv.p', "rb")
+        # tdiv = pickle.load(f)
+        # tscript = open('static/bokehscripts/'+session['vars']['hid']+'yearscript.js','r').read()
+        ######render
+
+        d_file = Path(session['abfile'])
+        if not d_file.is_file():
+            div = "<br><br><br><center><b>Similarity Plot is being calculated, page will load when completed.</b><br><img src='/static/loading.gif' /></center>"
+            return render_template('pubview.html', searchstring=ss, script='reload', div=div, curpage=session['curpage'], nav_id=session['nav_id'], nav_name=session['nav_name'])
+        else:
+            div = open(session['abfile'],'r').read()
+            return render_template('pubview.html', searchstring=ss, script='', div=div, curpage=session['curpage'], nav_id=session['nav_id'], nav_name=session['nav_name'])
+
+
+
+@app.route('/enterabstract', methods=['GET','POST'])
+def enterAbstract():
+
+    session['curpage'] = 'enterabstract'
+
+    try:
+        del session['abstract_thread']
+    except:
+        pass
+
+    tdiv = open('static/abstractdiv.html','r').read()
+    tscript = 'none'
+
+    #checks if search term is present to pass along, might not be there for abstract search
+    if 'vars' in session:
+        if 'searchStr' in session['vars']:
+            ss = session['vars']['searchStr']
+        else:
+            ss = ''
+    else:
+        ss = ''
+
+
+    #put div and script here for abstract search
+    return render_template('pubview.html', searchstring=ss, script=tscript, div=tdiv, curpage=session['curpage'], nav_id=session['nav_id'], nav_name=session['nav_name'])
 
 
 if __name__ == "__main__":

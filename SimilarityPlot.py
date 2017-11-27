@@ -11,6 +11,7 @@ import scipy.sparse as sp
 import colorsys
 import re
 import sqlite3
+import gensim
 
 
 import xml.etree.ElementTree as ET
@@ -38,38 +39,11 @@ from bokeh.models.glyphs import Text
 #add to end of elink post: &query_key=<key>&WebEnv=<webenv string>
 #Parks Stone Pubmed ID 24923681
 
-# UID list. Either a single UID or a comma-delimited list of UIDs may be provided.
-# All of the UIDs must be from the database specified by dbfrom.
-# There is no set maximum for the number of UIDs that can be passed to ELink,
-# but if more than about 200 UIDs are to be provided, the request should be made using the HTTP POST method.
-
-#similarity score for comparing sets, ie cited articles
-#see http://dataconomy.com/2015/04/implementing-the-five-most-popular-similarity-measures-in-python/
-#
-
-# def returnJaccard(cids):
-#     lenList = len(cids)
-#     jarr = np.zeros([lenList,lenList])
-#     for ix in range(lenList):
-#         for jx in range(lenList):
-#             if(ix>jx):
-#                 jc = jaccard(cids[ix],cids[jx])
-#                 jarr[ix][jx] = jc
-#                 jarr[jx][ix] = jc
-#     print(jarr[:5])
-#     return jarr
-
-# def jaccard(x,y):
-
-#     intersection_cardinality = len(set.intersection(*[set(x), set(y)]))
-#     union_cardinality = len(set.union(*[set(x), set(y)]))
-#     return intersection_cardinality/float(union_cardinality)
-
 ### Get ids (PMID) for papers in search
 def PMIDsFromSearch(s,sy,ey):
     pre = time.time()
-
-    search_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term="+s+"&mindate="+sy+"/01/01&maxdate="+ey+"/12/31&usehistory=y&retmode=json"
+    search_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&mindate="+sy+"&maxdate="+ey+"&usehistory=y&retmode=json"
+    #search_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term="+s+"&mindate="+sy+"/01/01&maxdate="+ey+"/12/31&usehistory=y&retmode=json"
     #pre = time.time()
     search_r = requests.post(search_url)
     #print("Web Env retrieved:"+str(time.time()-pre))
@@ -165,14 +139,6 @@ def getCitedFromPMIDs(rids, lp):
                 ids.append(int(ttid.text))
     return ids, cids
 
-#query sql database for matching citations
-def getCitedFromSQL(pids,db):
-    conn = sqlite3.connect(db)
-
-    sql_query = 'SELECT * FROM citations WHERE pmid IN (' + ','.join(map(str,pids)) + ')'
-    sqlpd = pd.read_sql_query(sql_query,conn)
-
-    return sqlpd
 ########Grabs all ids summary to get the title, authors, pubdate for each PMID
 def getPMIDInfo(ids):
     #use full journal name
@@ -184,37 +150,115 @@ def getPMIDInfo(ids):
 
     #https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&version=2.0&id=27656642,24923681
     info_base = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi"
-    info_data = {"db":"pubmed", "version":"2.0"}
-    info_str = ""
     info_post = info_base
+    info_data = {"db":"pubmed", "version":"2.0"}
 
-    #loop over all PMIDs
-    for tid in ids:
-        info_str += str(tid)+","
+    for i in range(0,len(ids),10000):
 
-    info_str = info_str[:-1]
-    info_data["id"] = info_str
-    #print(info_str)
+        #performs multipel requests if over 10000 are being used, limitation of pubmed
 
-    pre = time.time()
-    info_fetch = requests.post(info_post, data=info_data)
-    print("Info Retrieved:"+str(time.time()-pre))
+        info_str = ""
 
-    croot = ET.fromstring(info_fetch.text)
+        #loop over all PMIDs, could just use join, change to this in future
+        for tid in ids[i:i+10000]:
+            info_str += str(tid)+","
 
-    for doc in croot[0].iter('DocumentSummary'):
-        titles.append(doc.find('Title').text)
-        dates.append(doc.find('PubDate').text)
-        journals.append(doc.find('FullJournalName').text)
-        pmccites.append(doc.find('PmcRefCount').text)
+        info_str = info_str[:-1]
+        info_data["id"] = info_str
+        #print(info_str)
 
-        tempAuths = []
-        for auth in doc.find('Authors').iter('Author'):
-            tempAuths.append(auth.find('Name').text)
-        authors.append(tempAuths)
+        pre = time.time()
+        info_fetch = requests.post(info_post, data=info_data)
+        print("Info Retrieved:"+str(time.time()-pre))
+
+        croot = ET.fromstring(info_fetch.text)
+
+        for doc in croot[0].iter('DocumentSummary'):
+            titles.append(doc.find('Title').text)
+            dates.append(doc.find('PubDate').text)
+            journals.append(doc.find('FullJournalName').text)
+            pmccites.append(doc.find('PmcRefCount').text)
+
+            tempAuths = []
+            for auth in doc.find('Authors').iter('Author'):
+                tempAuths.append(auth.find('Name').text)
+            authors.append(tempAuths)
 
 
     return titles, dates, authors, journals, pmccites
+
+
+#query sql database for matching citations
+def getCitedFromSQL(pids,db):
+    conn = sqlite3.connect(db)
+
+    sql_query = 'SELECT * FROM citations WHERE pmid IN (' + ','.join(map(str,pids)) + ')'
+    sqlpd = pd.read_sql_query(sql_query,conn)
+
+    return sqlpd
+
+#query sql db for matching abstracts
+def getAbstractsFromSQL(pids,db):
+    conn = sqlite3.connect(db)
+
+    sql_query = 'SELECT * FROM abstracts WHERE pmid IN (' + ','.join(map(str,pids)) + ')'
+    sqlpd = pd.read_sql_query(sql_query,conn)
+
+    return sqlpd
+
+#read corpus of abstracts for doc2vec model
+def read_corpus(inputinfo, tokens_only=False):
+    for line in list(inputinfo):
+        if tokens_only:
+            yield gensim.utils.simple_preprocess(line)
+        else:
+            # For training data, add tags
+            yield gensim.models.doc2vec.TaggedDocument(gensim.utils.simple_preprocess(line), [line.split('\t')[0]])
+
+#build doc2vec model using traning corpus
+def buildModel(train_corpus,sz,mincnt,it):
+
+    #build the model object
+    model = gensim.models.doc2vec.Doc2Vec(size=sz, min_count=mincnt, iter=it)
+
+    #build the vocab of from the training corpus
+    model.build_vocab(train_corpus)
+
+    #train the model
+    model.train(train_corpus, total_examples=model.corpus_count, epochs=model.iter)
+
+    return model
+
+#use doc2vec model to vectorize corpus of abstracts
+def vectorizeAbstracts(ids,absts):
+
+    #amount of floats to output to represent each document, ie 300 doubles
+    model_size = 300
+    #minimum number of times word has to show up in corpus to be kept
+    model_min_count = 5
+    #number of times to iterate over the data to build the model
+    model_iter = 20
+
+    id_abs = ids.map(str)+'\t'+absts
+
+    train_corpus = list(read_corpus(id_abs))
+    model = buildModel(train_corpus,model_size,model_min_count,model_iter)
+
+    outab = pd.DataFrame(columns=list(range(model_size)))
+    for tid in ids:
+        ts = pd.Series(model.docvecs[str(tid)])
+        outab.loc[len(outab)] = ts
+
+    del model
+
+    return ids, outab
+
+def tfidfCosineSimilarity(train_abstracts):
+    vectorizer = TfidfVectorizer(stop_words='english')
+    X = vectorizer.fit_transform(train_abstracts)
+    cosarr = cosine_similarity(X)
+
+    return cosarr
 
 def returnCosine(cids):
     column = np.hstack(cids).astype(np.float)
@@ -224,9 +268,11 @@ def returnCosine(cids):
     mat = sp.csc_matrix((vals, (row, column)))
 
 
-    jarr = cosine_similarity(mat)
+    cosarr = cosine_similarity(mat)
     #print(jarr[:5])
-    return jarr
+
+    ####errors about 'NaNs' in this matrix are likely an issue with version incompatability between numpy,scipy,sklearn
+    return cosarr
 
 
 def calcTSNE(X):
@@ -276,7 +322,14 @@ def pseudocolor(val, minval, maxval):
     # correspond to the colors red..green in the HSV colorspace
     maxc = 240
     minc = 180
-    h = (maxc-minc)*(val-minval)/(maxval-minval)+minc
+
+    #check case where maxval = min val (only one year is returned)
+    if(maxval-minval == 0):
+        denom = 1
+    else:
+        denom = maxval-minval
+
+    h = (maxc-minc)*(val-minval)/(denom)+minc
     #reverse the values, comment to prevent reverse
     h = abs(h-maxc)+minc
     # convert hsv color (h,1,1) to its rgb equivalent
@@ -310,10 +363,15 @@ def kmeansClustering(pts,nc):
     return kms.cluster_centers_,kms.labels_
 
 def tfidfClusters(clusts,tits):
+
+    #print(str(len(clusts))+" clust length    "+str(len(tits))+ "  title ")
     combclusts = []
+
+    #loop over each unique cluster tag (eg 0,1,2...)
     for cid in list(set(clusts)):
         ts = []
 
+        #create list of all titles associated with this specific cluster tag
         for idx,cn in enumerate(clusts):
             if(cn == cid):
                 ts.append(tits[idx])
@@ -332,51 +390,79 @@ def tfidfClusters(clusts,tits):
     # print(len(feature_array))
     return topn
 
+#calculate similarity between articles then return data for plotting
+def SimilarityCalc(si, sy, ey, db, abstractsim):
+    #maximum number of ids to compute similarity on, if more are found, newest 15500 are taken
+    maxids = 15500
 
-def similarityGraph(si, sy, ey, lp, db):
+
     pres = time.time()
     ss = quote(si)
-
+    print("Creating plot for: "+ss)
     print("Searching for PMIDs")
     rids = PMIDsFromSearch(ss, sy, ey)
     #stop search if too broad, prevent from breaking
-    if(len(rids)>15500):
-        return len(rids)
+    # if(len(rids)>maxids):
+    #     #truncate list for newest articles
+    #     print("Truncated id list, too many articles found")
+    #     rids = rids[:maxids]
 
-    #retrieve primary info from built database
-    print("Querying db for citations")
-    pre = time.time()
-    cdf = getCitedFromSQL(rids, db)
-    print(str(len(cdf.index))+"/"+str(len(rids))+" citations found")
+    #whether running abstract sim or citation sim
+    if(abstractsim):
+        ##########ABSTRACT SIMILARITY CODE################
+        print("Querying db for abstracts")
+        pre = time.time()
+        sdf = getAbstractsFromSQL(rids, db)
+        print(str(len(sdf.index))+"/"+str(len(rids))+" pubmed results found in db")
 
-    #clean up, delete ids without citation data
-    cdfc = cdf.dropna()
-    print(str(len(cdfc.index))+"/"+str(len(cdf.index))+" have citation data")
-    print("Retrieved in "+str(time.time()-pre)+" seconds")
+        #clean up, delete ids without abstract data
+        sdfc = sdf.dropna()
 
-    # SHOULD POTENTIALLY ADD THIS BACK, OTHERWISE WILL MISS SOME PUBLICATIONS, difference between what was in database and what was returned by pubmed
-    # nrids = list(set(cdf['pmid']).symmetric_difference(set(rids)))
-    # print("Retrieving remaining "+str(len(nrids))+" publications")
-    #
-    # print("Getting Cited PMIDs")
-    # ###MODIFY nrids to be the citation data from database!!!!!!!!!!!
-    # ids, cids = getCitedFromPMIDs(nrids, lp)
-    # print("New ids :"+str(len(ids)))
+        print(str(len(sdfc.index))+"/"+str(len(sdf.index))+" from db have abstract data")
+        print("DB info retrieved in "+str(time.time()-pre)+" seconds")
 
-    #build citation arrays for cosine calcutation
-    ids = list(cdfc['pmid'])
-    cids = []
-    for index,row in cdfc.iterrows():
-        cids.append(row['citationids'].split(','))
+        ######CODE for tfidf_matrix
+        print("Building tfidf model")
+        pre = time.time()
+        ids = sdfc['pmid']
+        carr = tfidfCosineSimilarity(sdfc['abstract'])
+        print("Tf-idf and cosine similarity time:"+str(time.time()-pre)+" seconds")
+
+
+        ##########END ABSTRACT SIMILARITY#################
+    else:
+        ##########CITATION SIMILARITY CODE################
+        #retrieve primary info from built database
+        print("Querying db for citations")
+        pre = time.time()
+        sdf = getCitedFromSQL(rids, db)
+        print(str(len(sdf.index))+"/"+str(len(rids))+" citations found")
+        #
+        # #clean up, delete ids without citation data
+        sdfc = sdf.dropna()
+
+        # for testing purposes
+        # with open('telomerase_pmids.p','wb') as f:
+        #      pickle.dump(list(map(int,sdfc['pmid'])),f)
+
+        print(str(len(sdfc.index))+"/"+str(len(sdf.index))+" have citation data")
+        print("DB info retrieved in "+str(time.time()-pre)+" seconds")
+
+        #build citation arrays for cosine calcutation
+        ids = list(sdfc['pmid'])
+        cids = []
+        for index,row in sdfc.iterrows():
+            cids.append(row['citationids'].split(','))
+
+        print("Performing sparse cosine similarity")
+        pre = time.time()
+        carr = returnCosine(cids)
+        print("Cosine similarity time:"+str(time.time()-pre))
+
+        # ##########END CITATION SIMILARITY CODE################`
 
     print("Getting Info of PMIDs")
     titles, dates, authors, journals, pmccites = getPMIDInfo(ids)
-
-
-    print("Performing sparse cosine similarity")
-    pre = time.time()
-    carr = returnCosine(cids)
-    print("Cosine similarity time:"+str(time.time()-pre))
 
     print("Performing TSNE")
     pre = time.time()
@@ -400,15 +486,43 @@ def similarityGraph(si, sy, ey, lp, db):
         topwords.append(tw)
     print("TF-IDF Kmeans Time:"+str(time.time()-pre))
 
+    print("TSNE_entries: "+str(len(titles)))
+    print("Total_Time: "+str(time.time()-pres))
 
-    print("Total Time:"+str(time.time()-pres))
+    d = {}
+    d['ids'] = ids
+    d['titles'] = titles
+    d['dates'] = dates
+    d['authors'] = authors
+    d['journals'] = journals
+    d['pmccites'] = pmccites
+    d['Y'] = Y
+    d['topwords'] = topwords
+    d['kcenters'] = kcenters
+    d['minc'] = minc
+    d['maxc'] = maxc
+    d['maxids'] = maxids
+    d['rids'] = rids
+    d['sdfc_len'] = len(sdfc.index)
+    return d
 
 
+#generate similarity graph using search input, search year, end year, database, and whether it is abstract or citation similarity
+def similarityGraph(si, sy, ey, db, abstractsim):
 
+    #calculate similarity and return necessary info
+    #ids = pmids of search, dates = dates of pmids, authors = authors of pmids, pmccites = number of cites, Y is x,y coordinate
+    #from dimensionality reduction, topwords = labels of clusters from kmeans/tfidf, kcenters = x,y centers of clusters from kmeans
+    #d is dictionary for all data storage
+    d  = SimilarityCalc(si, sy, ey, db, abstractsim)
+
+    # for testing purposes
+    # with open('data.pk','wb') as f:
+    #      pickle.dump(d,f)
 
     #convert authors list of lists to list of strings for display
     authors_str = []
-    for auths in authors:
+    for auths in d['authors']:
         authors_str.append(", ".join(auths))
 
     #calcualte a scaled pt size based on citation quantity
@@ -417,25 +531,25 @@ def similarityGraph(si, sy, ey, lp, db):
 
     # with open('citespkl.p','wb') as f:
     #     pickle.dump(list(map(int,pmccites)),f)
-    ptsizes = getScaledSizes(list(map(int,pmccites)),minw,maxw)
+    ptsizes = getScaledSizes(list(map(int,d['pmccites'])),minw,maxw)
 
 
     #create colors based on years published
-    colors = getScaledColors(dates)
+    colors = getScaledColors(d['dates'])
 
     #colors = ['blue']*len(ids)
-    alphas = [1]*len(ids)
+    alphas = [1]*len(d['ids'])
     source = ColumnDataSource(
             data=dict(
-                x=Y[:,0],
-                y=Y[:,1],
-                PMID=ids,
-                titles=titles,
+                x=d['Y'][:,0],
+                y=d['Y'][:,1],
+                PMID=d['ids'],
+                titles=d['titles'],
                 authors=authors_str,
-                journals=journals,
-                dates=dates,
+                journals=d['journals'],
+                dates=d['dates'],
                 alphas=alphas,
-                pmccites=pmccites,
+                pmccites=d['pmccites'],
                 ptsizes=ptsizes,
                 colors=colors,
                 colorsperm=colors
@@ -570,6 +684,14 @@ def similarityGraph(si, sy, ey, lp, db):
     """)
 
 
+    publistcallback = CustomJS(args=dict(pubview_table = pubview_table), code="""
+        var pmids = pubview_table.get('source').get('data').PMID;
+        var pmidlist = pmids.join()
+        var url = "https://www.ncbi.nlm.nih.gov/pubmed/"+pmidlist
+        window.open(url,'_blank');
+    """)
+
+
     TOOLS = 'pan,lasso_select,wheel_zoom,tap,reset'
     p = figure(plot_width=900, plot_height=600, title="'"+si+"' tSNE similarity", tools=[TOOLS,hover], active_scroll='wheel_zoom', active_drag="lasso_select")
 
@@ -577,13 +699,13 @@ def similarityGraph(si, sy, ey, lp, db):
 
     #word labeles for plots
     wordsources = []
-    for idx in list(range(len(topwords))):
-        wordsources.append(ColumnDataSource(dict(x=kcenters[idx][:,0], y=kcenters[idx][:,1], text=topwords[idx])))
+    for idx in list(range(len(d['topwords']))):
+        wordsources.append(ColumnDataSource(dict(x=d['kcenters'][idx][:,0], y=d['kcenters'][idx][:,1], text=d['topwords'][idx])))
 
     wordglyph = Text(x="x", y="y", text="text", text_color="#000000",text_font_style="bold", text_font_size="14pt")
     #5 is used for initial slider set below
     initialclust = 5
-    wordholdsource = ColumnDataSource(dict(x=kcenters[initialclust][:,0], y=kcenters[initialclust][:,1], text=topwords[initialclust]))
+    wordholdsource = ColumnDataSource(dict(x=d['kcenters'][initialclust][:,0], y=d['kcenters'][initialclust][:,1], text=d['topwords'][initialclust]))
     p.add_glyph(wordholdsource, wordglyph)
 
     # source = ColumnDataSource(data=dict(x=x, y=y))
@@ -592,8 +714,8 @@ def similarityGraph(si, sy, ey, lp, db):
     # plot.line('x', 'y', source=source, line_width=3, line_alpha=0.6)
     args = {}
     args["wordholdsource"] = wordholdsource
-    for idx in list(range(len(topwords))):
-        args["wordsource"+str(idx+minc)] = wordsources[idx]
+    for idx in list(range(len(d['topwords']))):
+        args["wordsource"+str(idx+d['minc'])] = wordsources[idx]
 
     #had to use eval hack because of limitations on the type of objects that can be passed into the callback, limited by bokeh backend
     slidercallback = CustomJS(args=args, code="""
@@ -605,7 +727,7 @@ def similarityGraph(si, sy, ey, lp, db):
         wordholdsource.trigger('change');
     """)
 
-    wslider = Slider(start=minc, end=maxc, value=minc+initialclust, step=1, title="# of labels")
+    wslider = Slider(start=d['minc'], end=d['maxc'], value=d['minc']+initialclust, step=1, title="# of labels")
     # slider = Slider(start=0.1, end=4, value=1, step=.1, title="power", callback=callback)
     wslider.js_on_change('value', slidercallback)
 
@@ -618,7 +740,7 @@ def similarityGraph(si, sy, ey, lp, db):
     p.yaxis.minor_tick_line_color = None
     p.xaxis.major_label_text_font_size = '0pt'  # turn off x-axis tick labels
     p.yaxis.major_label_text_font_size = '0pt'
-    left, right, bottom, top = np.amin(Y[:,0])*1.1, np.amax(Y[:,0])*1.1, np.amin(Y[:,1])*1.1, np.amax(Y[:,1])*1.1
+    left, right, bottom, top = np.amin(d['Y'][:,0])*1.1, np.amax(d['Y'][:,0])*1.1, np.amin(d['Y'][:,1])*1.1, np.amax(d['Y'][:,1])*1.1
     p.x_range=Range1d(left, right)
     p.y_range=Range1d(bottom, top)
 
@@ -633,8 +755,17 @@ def similarityGraph(si, sy, ey, lp, db):
 
 
     spdiv = Div(text="&nbsp;",width = 100, height=20)
-    tit1 = Div(text="<h1>"+si+" similarity plot</h1><br><h5>(displaying "+str(len(cdfc.index))+"/"+str(len(rids))+" articles with citation data)</h5>",width=930)
-    lt = layout([[tit1], [word_input],[reset,spdiv,wslider],[p],[pubview_table]])
+
+    #add addition message saying data was cutoff in case of vague search terms
+    if(len(d['rids']) == d['maxids']):
+        cutoff_message = "<br>(Search was truncated to "+str(d['maxids'])+" newest articles due to memory constraints)"
+    else:
+        cutoff_message = ""
+
+    tit1 = Div(text="<h1>"+si+" similarity plot</h1><br><h5>Displaying the "+str(d['sdfc_len'])+"/"+str(len(d['rids']))+" articles that have data on pubmed"+cutoff_message+"</h5>",width=930)
+
+    pubmed_list_button = Button(label="Export selected publications to pubmed", callback=publistcallback)
+    lt = layout([[tit1], [word_input],[reset,spdiv,wslider],[p],[pubmed_list_button],[pubview_table]])
 
     return lt
 
@@ -644,17 +775,37 @@ def similarityGraph(si, sy, ey, lp, db):
 # lt = similarityGraph(ss,syear,eyear)
 # show(lt)
 
-# print(jarr[:5])
-# print(ids[:5])
-# print(cids[:5])
-# print(titles[:5])
-# print(authors[:5])
-# print(dates[:5])
-# print(journals[:5])
-
 
 # cited_fetch = requests.post(cited_post)
 # cited_xml += cited_fetch.text
 # f = open("cited_"+ss+".xml", 'w')
 # f.write(cited_xml)
 # f.close()
+
+
+# UID list. Either a single UID or a comma-delimited list of UIDs may be provided.
+# All of the UIDs must be from the database specified by dbfrom.
+# There is no set maximum for the number of UIDs that can be passed to ELink,
+# but if more than about 200 UIDs are to be provided, the request should be made using the HTTP POST method.
+
+#similarity score for comparing sets, ie cited articles
+#see http://dataconomy.com/2015/04/implementing-the-five-most-popular-similarity-measures-in-python/
+#
+
+# def returnJaccard(cids):
+#     lenList = len(cids)
+#     jarr = np.zeros([lenList,lenList])
+#     for ix in range(lenList):
+#         for jx in range(lenList):
+#             if(ix>jx):
+#                 jc = jaccard(cids[ix],cids[jx])
+#                 jarr[ix][jx] = jc
+#                 jarr[jx][ix] = jc
+#     print(jarr[:5])
+#     return jarr
+
+# def jaccard(x,y):
+
+#     intersection_cardinality = len(set.intersection(*[set(x), set(y)]))
+#     union_cardinality = len(set.union(*[set(x), set(y)]))
+#     return intersection_cardinality/float(union_cardinality)

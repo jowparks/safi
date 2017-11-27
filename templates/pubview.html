@@ -1,7 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-<title>Pubmed Statistics</title>
-
 <head>
 
   <meta charset="utf-8">
@@ -9,7 +7,18 @@
   <meta name="description" content="">
   <meta name="author" content="">
 
-  <title>Pubmed Statistics</title>
+  <title>
+    {% if script is defined %}
+      {% if script != "reload" %}
+        {{ searchstring }} search results
+      {% else %}
+        Loading...
+      {% endif %}
+    {% endif %}
+    {% if curpage == 'about' %}
+      About
+    {% endif %}
+  </title>
 
   <!-- Bootstrap core CSS -->
   <link href="{{ url_for('static',filename='bootstrap.min.css')}}" rel="stylesheet">
@@ -17,14 +26,30 @@
 
   <!-- If statement below is a hack that I used to bypass the file not being loaded on initial load, gcloud wasn't finding the file
   directly after creation, took a few seconds, so I load script directly into page instead first time, reloading page uses the saved file -->
-  {% if script == "none" %}
+  {% if script is not defined %}
 
   {% elif  script == "reload" %}
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
     <script>
-      $(document).ready(function(){
-        $('<form method="post" action="/similarity"></form>').appendTo('body').submit();
-      });
+
+      {% if curpage == "similarity" %}
+        $(document).ready(function(){
+          $('<form method="post" action="/similarity"></form>').appendTo('body').submit();
+        });
+      {% endif %}
+
+      {% if curpage == "similarityab" %}
+        $(document).ready(function(){
+          $('<form method="post" action="/similarityab"></form>').appendTo('body').submit();
+        });
+      {% endif %}
+
+      {% if curpage == "abstractsearch" %}
+        $(document).ready(function(){
+          $('<form method="post" action="/abstractsearch" style="display:none;"><input name="abstract" value="reloading"></input></form>').appendTo('body').submit();
+        });
+      {% endif %}
+
     </script>
   {% else %}
     {{ script | safe }}
@@ -76,32 +101,12 @@
       <span class="navbar-toggler-icon"></span>
     </button>
     <form action="/" method="post">
-      <a class="navbar-brand" href="javascript:;" onclick="parentNode.submit(); showDiv('loadingImg'); hideDiv('data_container');">PubmedApp</a>
+      <a class="navbar-brand" href="javascript:;" onclick="parentNode.submit(); showDiv('loadingImg'); hideDiv('data_container');">SAFI</a>
     </form>
 
     <div class="collapse navbar-collapse" id="navbarsExampleDefault">
       <ul class="navbar-nav mr-auto">
-        <!--<form action="/home" method="post">
-          <li class="nav-item active">
-            <a class="nav-link" href="#">Home <span class="sr-only">(current)</span></a>
-            <a class="nav-link" href="#">Home</a>
-          </li>
-        </form>
-        <form action="/counts" method="post">
-          <li class="nav-item">
-            <a class="nav-link" href="javascript:;" onclick="parentNode.parentNode.submit(); showDiv('loadingImg'); hideDiv('data_container');">Counts</a>
-          </li>
-        </form>
-        <form action="/geo" method="post">
-          <li class="nav-item">
-            <a class="nav-link" href="javascript:;" onclick="parentNode.parentNode.submit(); showDiv('loadingImg'); hideDiv('data_container');">Geography</a>
-          </li>
-        </form>
-        <form action="/similarity" method="post">
-          <li class="nav-item">
-            <a class="nav-link" href="javascript:;" onclick="parentNode.parentNode.submit(); showDiv('loadingImg'); hideDiv('data_container');">Similarity</a>
-          </li>
-        </form>-->
+
         {% for item in nav_id %}
         <form action="/{{ item }}" method="post">
           <li class={% if curpage == item %}"nav-item active"{% else %}"nav-item"{% endif %}>
@@ -110,18 +115,6 @@
         </form>
         {% endfor %}
 
-        <!--<li class="nav-item">
-          <a class="nav-link disabled" href="#">Disabled</a>
-        </li>-->
-
-        <!--<li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" href="http://example.com" id="dropdown01" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Dropdown</a>
-          <div class="dropdown-menu" aria-labelledby="dropdown01">
-            <a class="dropdown-item" href="#">Action</a>
-            <a class="dropdown-item" href="#">Another action</a>
-            <a class="dropdown-item" href="#">Something else here</a>
-          </div>
-        </li>-->
       </ul>
       <form class="form-inline my-2 my-lg-0" id='search_form' method='post' action='/search' onsubmit="showDiv('loadingImg');hideDiv('data_container');">
         <input class="form-control mr-sm-2" type="text" name='searchterm' {% if curpage == "" %}placeholder="Enter search (e.g. ebola)"{% else %}value="{{ searchstring }}"{% endif %}>
@@ -134,48 +127,75 @@
       <!-- Loading image once clicked -->
       <center><img id="loadingImg" src="{{ url_for('static',filename='loading.gif')}}" style="display:none" /></center>
       <div id='data_container' style="display:block;" >
+        <!-- Allows user to delete cached results and recalculate plot/results -->
+
+        {% if script is defined %}
+          {% if script != "reload" %}
+            <form action="/{{ curpage }}" method="post">
+              <center>
+                <input type="hidden" name="delete" value="True">
+                <button type="submit" onclick="showDiv('loadingImg');hideDiv('data_container');">Delete Cached Info and Reload</button>
+              </center>
+            </form>
+          {% endif %}
+        {% endif %}
+
+
       <!-- Year stats page -->
         {% if curpage == "counts" %}
+
           <!-- SET WIDTH OF PAGE DIV HERE WITH JS DEPENDING ON PAGE LOADED -->
           {{ div.yearplot | safe }}
+
         {% endif %}
         <!-- End year stats page -->
         <!-- State graph page -->
         {% if curpage == "geo" %}
+
           {{ div.stateplot | safe }}
+
         {% endif %}
         <!-- End state graph page -->
         <!-- Similarity page -->
         {% if curpage == "similarity" %}
+
           {{ div.simplot | safe }}
+
         {% endif %}
         <!-- End similarity page -->
+        <!-- Abstract similarity page -->
+        {% if curpage == "similarityab" %}
+
+          {{ div.simplot | safe }}
+
+        {% endif %}
+        <!-- End Abstract similarity page -->
         <!-- About page -->
         {% if curpage == "about" %}
-        <h1>Contact Information</h1>
-        <br>
-        <table align="center">
-            <tr>
-              <td><img src="{{ url_for('static',filename='headshot.jpg')}}" width=192 height=288/></td>
-              <td align="center"><font size="5">Joseph Parks<br>Data Scientist | Biophysicist<br>jowparks@gmail.com<br>(541)601-6139</font></td>
-            </tr>
-            <tr>
-            </tr>
-        </table>
-        <br>
-        <h1>Application workflow</h1>
-        <br>
-        <center><img src="{{ url_for('static',filename='workflow.png')}}" width=663 height=234 /></center>
+          {{ div | safe }}
         {% endif %}
         <!-- End about page -->
+
+        <!-- Abstract search page -->
+        {% if curpage == "enterabstract" %}
+          {{ div | safe }}
+        {% endif %}
+        <!-- End abstract search page -->
+
+        <!-- Abstract results page -->
+        {% if curpage == "abstractsearch" %}
+          {{ div | safe }}
+        {% endif %}
+        <!-- End abstract results page -->
 
       </div>
   </div>
 
+
   <!--<div id='b1' style="display:block" class=box1></div>
   <div id='b2' style="display:none" class=box2></div>
   <input type='submit' onclick="swapDiv('b1','b2');" value='Submit' />-->
-
+  <a href='https://docs.google.com/forms/d/e/1FAIpQLSfvwUacYFPQthZ75cB2mKLYhAmVCUH-rVh5XsK_FCnll1AU_Q/viewform?usp=sf_link' target='_blank' class='button'>Help me by taking this survey!</a>
 
   <!-- Bootstrap core JavaScript
   ================================================== -->
@@ -185,6 +205,8 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/tether/1.4.0/js/tether.min.js" integrity="sha384-DztdAPBWPRXSA/3eYEEUWrWCy7G5KFbe8fFjk5JAIxUYHKkDx6Qin1DkWx51bBrb" crossorigin="anonymous"></script>
   <script src="{{ url_for('static',filename='bootstrap.min.js')}}"></script>
   <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
+
+
   <script src="{{ url_for('static',filename='ie10-viewport-bug-workaround.js')}}"></script>
 
 </body>
